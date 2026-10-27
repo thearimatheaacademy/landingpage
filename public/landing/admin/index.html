@@ -7,7 +7,7 @@
 <title>Admin · Kingdom School</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/kingdomschool/site.css">
+<link rel="stylesheet" href="/landing/site.css">
 <style>
 .wide{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--forest);margin-bottom:24px}
@@ -44,7 +44,7 @@ textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
 </style>
 </head>
 <body>
-<header class="bar"><div><a href="/kingdomschool/">THE ARIMATHEA ACADEMY · ADMIN</a><span id="who" style="color:var(--cream);font-size:13px"></span></div></header>
+<header class="bar"><div><a href="/landing/">THE ARIMATHEA ACADEMY · ADMIN</a><span id="who" style="color:var(--cream);font-size:13px"></span></div></header>
 
 <!-- Login -->
 <main id="login" class="wrap hidden">
@@ -130,7 +130,7 @@ const show = (id) => ['login', 'denied', 'app'].forEach((x) => $('#' + x).classL
 let sb, people = [], steps = [];
 
 (async function init() {
-  const cfg = await fetch('/kingdomschool/api/config').then((r) => r.json());
+  const cfg = await fetch('/landing/api/config').then((r) => r.json());
   sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
   sb.auth.onAuthStateChange((_e, session) => route(session));
   route((await sb.auth.getSession()).data.session);
@@ -155,12 +155,12 @@ $('#loginForm').addEventListener('submit', async (e) => {
   const { error } = await sb.auth.signInWithPassword({ email: $('#le').value, password: $('#lp').value });
   if (error) { $('#loginErr').textContent = error.message; $('#loginErr').style.display = 'block'; }
 });
-$('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/kingdomschool/admin/' } });
+$('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/landing/admin/' } });
 $('#forgot').onclick = async (e) => {
   e.preventDefault();
   const email = $('#le').value || prompt('Your admin email');
   if (!email) return;
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/kingdomschool/admin/#reset' });
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/landing/admin/#reset' });
   toast('If that account exists, a reset link has been sent.');
 };
 sbReady();
@@ -183,7 +183,7 @@ $$('.tabs button').forEach((b) => (b.onclick = () => {
 
 async function api(path, body) {
   const { data } = await sb.auth.getSession();
-  const res = await fetch('/kingdomschool/api/admin/' + path, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + data.session.access_token }, body: JSON.stringify(body || {}) });
+  const res = await fetch('/landing/api/admin/' + path, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + data.session.access_token }, body: JSON.stringify(body || {}) });
   const out = await res.json();
   if (!res.ok) throw new Error(out.error || 'Request failed');
   return out;

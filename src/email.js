@@ -147,7 +147,7 @@ function layout(inner) {
 <div style="max-width:600px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#2B2A24;font-size:16px;line-height:1.6">
 <div style="background:#1E3A1B;padding:18px 24px;color:#E9D08A;letter-spacing:.3em;font-size:13px;font-weight:600">THE ARIMATHEA ACADEMY</div>
 <div style="background:#ffffff;padding:28px 24px">${inner}</div>
-<div style="padding:18px 24px;font-size:12px;color:#6b6858">Kingdom School of Business &amp; Ministry Bootcamp · arimatheaacademy.com/kingdomschool</div>
+<div style="padding:18px 24px;font-size:12px;color:#6b6858">Kingdom School of Business &amp; Ministry Bootcamp · thearimatheaacademy.com/landing</div>
 </div></body></html>`;
 }
 

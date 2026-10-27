@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createCheckoutSession, verifyStripeSignature } from './stripe.js';
 import { runScheduler, sendToRegistrant, sendManual } from './email.js';
 
-const BASE = '/kingdomschool';
+const BASE = '/landing';
 
 export default {
   async fetch(request, env, ctx) {
@@ -86,7 +86,7 @@ async function register(request, env, db) {
   return json({ url: session.url });
 }
 
-// Link in "complete your payment" emails: /kingdomschool/api/pay?id=…&t=…
+// Link in "complete your payment" emails: /landing/api/pay?id=…&t=…
 async function resumePayment(url, env, db) {
   const id = url.searchParams.get('id');
   const token = url.searchParams.get('t');

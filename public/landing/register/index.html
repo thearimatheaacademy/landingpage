@@ -1,5 +1,5 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/kingdomschool/img/speaker-03.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/kingdomschool/site.css"><title>Register · Kingdom School Bootcamp</title></head><body>
-<header class="bar"><div><a href="/kingdomschool/">THE ARIMATHEA ACADEMY</a></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/landing/img/speaker-03.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/landing/site.css"><title>Register · Kingdom School Bootcamp</title></head><body>
+<header class="bar"><div><a href="/landing/">THE ARIMATHEA ACADEMY</a></div></header>
 <section class="gold"><div class="wrap" style="padding-bottom:40px">
 <div class="eyebrow">REGISTRATION</div>
 <h1>Secure your place</h1>
@@ -23,13 +23,13 @@
 <select id="how_heard" name="how_heard"><option value="">Select…</option><option>Church announcement</option><option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>LinkedIn</option><option>Friend or family</option><option>Other</option></select></div>
 <div class="field"><label for="goals">What are you hoping to build? <span class="opt">(optional)</span></label><textarea id="goals" name="goals" rows="3" maxlength="2000"></textarea></div>
 <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-<label class="check"><input type="checkbox" name="accept_terms" required> <span>I agree to the <a href="/kingdomschool/terms/" target="_blank">terms &amp; refund policy</a> and <a href="/kingdomschool/privacy/" target="_blank">privacy policy</a>.</span></label>
+<label class="check"><input type="checkbox" name="accept_terms" required> <span>I agree to the <a href="/landing/terms/" target="_blank">terms &amp; refund policy</a> and <a href="/landing/privacy/" target="_blank">privacy policy</a>.</span></label>
 <label class="check"><input type="checkbox" name="marketing_consent"> <span>Keep me updated about future Arimathea Academy programmes.</span></label>
 <button class="btn full" id="go" style="margin-top:16px">CONTINUE TO PAYMENT · £150</button>
 <p style="font-size:13px;color:#3D3B33;margin:14px 0 0"><strong>Please note:</strong> Your place is confirmed once payment is received. You'll get a confirmation email with your Zoom link straight away.</p>
 </form>
 </main>
-<footer>© 2026 The Arimathea Academy · <a href="/kingdomschool/privacy/">Privacy</a> · <a href="/kingdomschool/terms/">Terms &amp; refunds</a></footer>
+<footer>© 2026 The Arimathea Academy · <a href="/landing/privacy/">Privacy</a> · <a href="/landing/terms/">Terms &amp; refunds</a></footer>
 <script>
 const f = document.getElementById('f'), err = document.getElementById('err'), go = document.getElementById('go');
 const show = (m) => { err.textContent = m; err.style.display = 'block'; err.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
@@ -42,7 +42,7 @@ f.addEventListener('submit', async (e) => {
   d.accept_terms = true; d.marketing_consent = !!d.marketing_consent;
   go.disabled = true; go.textContent = 'TAKING YOU TO PAYMENT…';
   try {
-    const res = await fetch('/kingdomschool/api/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
+    const res = await fetch('/landing/api/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
     const out = await res.json();
     if (!res.ok || !out.url) throw new Error(out.error || 'Something went wrong. Please try again.');
     location.href = out.url;

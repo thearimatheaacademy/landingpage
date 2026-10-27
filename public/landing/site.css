@@ -6,7 +6,7 @@ a{color:var(--green)}
 .bar{background:var(--forest)}
 .bar div{max-width:1240px;margin:0 auto;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .bar a{font-family:'Oswald',sans-serif;font-weight:500;letter-spacing:.32em;font-size:14px;color:var(--gold);text-decoration:none}
-.gold{background:#E9D28C url(/kingdomschool/img/gold-texture.jpg) repeat;background-size:1200px 600px}
+.gold{background:#E9D28C url(/landing/img/gold-texture.jpg) repeat;background-size:1200px 600px}
 .wrap{max-width:760px;margin:0 auto;padding:56px 24px 96px}
 .eyebrow{font-family:'Oswald',sans-serif;font-weight:500;letter-spacing:.3em;font-size:14px;color:var(--green)}
 h1{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;line-height:1;font-size:clamp(2.4rem,6vw,4rem);margin:12px 0 16px;color:#3B8036}

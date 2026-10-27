@@ -1,20 +1,20 @@
-# Kingdom School: arimatheaacademy.com/kingdomschool
+# Kingdom School: thearimatheaacademy.com/landing
 
 This project covers the landing page, registration with Stripe payment, the admin dashboard and the automated emails for the
 Kingdom School of Business & Ministry Bootcamp.
 
 | Piece | Where |
 |---|---|
-| Hosting, API, email scheduler (cron every 5 min) | Cloudflare Worker `kingdomschool` (`src/`) + static pages (`public/kingdomschool/`) |
+| Hosting, API, email scheduler (cron every 5 min) | Cloudflare Worker `landing` (`src/`) + static pages (`public/landing/`) |
 | Database, admin login (email/password + Google OAuth), access control (RLS) | Supabase (`supabase/migrations/`) |
 | Payments (£150, GBP) | Stripe Checkout + webhook |
 | Email delivery | Resend |
 
 ## Pages
-- `/kingdomschool/`: landing page (built from the design)
-- `/kingdomschool/register/`: form that hands off to Stripe Checkout
-- `/kingdomschool/success/`, `/kingdomschool/cancelled/`, `/privacy/`, `/terms/`
-- `/kingdomschool/admin/`: dashboard (registrants, paid / not paid, CSV, notes, manual "mark paid",
+- `/landing/`: landing page (built from the design)
+- `/landing/register/`: form that hands off to Stripe Checkout
+- `/landing/success/`, `/landing/cancelled/`, `/privacy/`, `/terms/`
+- `/landing/admin/`: dashboard (registrants, paid / not paid, CSV, notes, manual "mark paid",
   send payment link, compose & schedule emails, edit automations, Zoom link settings)
 
 ## How payment status works
@@ -36,26 +36,26 @@ The Zoom link is set in Admin → Settings.
 ### 1. Supabase
 1. Create a project in the *thearimatheaacademy* org (region `eu-west-2`, London).
 2. Run `supabase/migrations/0001_init.sql` in the SQL editor (or `supabase db push`).
-3. In Auth → URL configuration, set the Site URL to `https://arimatheaacademy.com/kingdomschool/admin/`
+3. In Auth → URL configuration, set the Site URL to `https://thearimatheaacademy.com/landing/admin/`
    and add it to Redirect URLs. Optional: Auth → Providers → Google (needs a Google OAuth client).
 4. Create the first admin:
-   `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run create-admin -- admin@arimatheaacademy.com 'StrongPassword'`
+   `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run create-admin -- admin@thearimatheaacademy.com 'StrongPassword'`
    (Anyone who signs in with Google gets no access until promoted the same way.)
 
 ### 2. Stripe
-- In Developers → Webhooks, add the endpoint `https://arimatheaacademy.com/kingdomschool/api/stripe-webhook`
+- In Developers → Webhooks, add the endpoint `https://thearimatheaacademy.com/landing/api/stripe-webhook`
   with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded` and `charge.refunded`.
 - Optional: set `STRIPE_PRICE_ID` to an existing £150 price. Otherwise the price is created inline.
 
 ### 3. Resend
-Add the domain `arimatheaacademy.com`, add its DNS records (SPF/DKIM) in Cloudflare DNS and create an API key.
+Add the domain `thearimatheaacademy.com`, add its DNS records (SPF/DKIM) in Cloudflare DNS and create an API key.
 
 ### 4. Domain: GoDaddy → Cloudflare
-A Worker can only serve `arimatheaacademy.com/kingdomschool` if the domain's DNS is on Cloudflare:
-1. In Cloudflare, add the site `arimatheaacademy.com` (Free plan). It imports the existing DNS records. Check that they
+A Worker can only serve `thearimatheaacademy.com/landing` if the domain's DNS is on Cloudflare:
+1. In Cloudflare, add the site `thearimatheaacademy.com` (Free plan). It imports the existing DNS records. Check that they
    match GoDaddy's so the rest of the site and email keep working.
 2. In GoDaddy, go to Domain → Nameservers → "I'll use my own" and enter the two Cloudflare nameservers.
-3. The main site stays wherever it's hosted today. Only `/kingdomschool*` is handled by this Worker.
+3. The main site stays wherever it's hosted today. Only `/landing*` is handled by this Worker.
 
 ### 5. Deploy
 ```
@@ -71,4 +71,4 @@ Test end to end with Stripe test keys (card `4242 4242 4242 4242`) before switch
 
 ## Development
 Copy `.dev.vars.example` to `.dev.vars`, fill in test keys and run `npm run dev`. To receive webhooks locally, run
-`stripe listen --forward-to localhost:8787/kingdomschool/api/stripe-webhook`. `npm test` runs the unit tests.
+`stripe listen --forward-to localhost:8787/landing/api/stripe-webhook`. `npm test` runs the unit tests.

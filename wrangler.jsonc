@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kingdomschool",
+  "name": "landing",
   "main": "src/index.js",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,23 +9,23 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none",
-    "run_worker_first": ["/kingdomschool/api/*", "/kingdomschool"]
+    "run_worker_first": ["/landing/api/*", "/landing"]
   },
-  // Serves only /kingdomschool on the main domain; the rest of arimatheaacademy.com is untouched.
-  // Requires arimatheaacademy.com to use Cloudflare nameservers (see README).
+  // Serves only /landing on the main domain; the rest of thearimatheaacademy.com is untouched.
+  // Requires thearimatheaacademy.com to use Cloudflare nameservers (see README).
   "routes": [
-    { "pattern": "arimatheaacademy.com/kingdomschool*", "zone_name": "arimatheaacademy.com" },
-    { "pattern": "www.arimatheaacademy.com/kingdomschool*", "zone_name": "arimatheaacademy.com" }
+    { "pattern": "thearimatheaacademy.com/landing*", "zone_name": "thearimatheaacademy.com" },
+    { "pattern": "www.thearimatheaacademy.com/landing*", "zone_name": "thearimatheaacademy.com" }
   ],
   "workers_dev": true,
   "triggers": { "crons": ["*/5 * * * *"] },
   "observability": { "enabled": true },
   "vars": {
-    "SITE_URL": "https://arimatheaacademy.com/kingdomschool",
-    "EMAIL_FROM": "The Arimathea Academy <kingdomschool@arimatheaacademy.com>",
+    "SITE_URL": "https://thearimatheaacademy.com/landing",
+    "EMAIL_FROM": "The Arimathea Academy <kingdomschool@thearimatheaacademy.com>",
     "EMAIL_REPLY_TO": "",
-    "SUPABASE_URL": "https://YOUR-PROJECT-REF.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_REPLACE_ME"
+    "SUPABASE_URL": "https://gzklxldsmhhwcolsgptk.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PchCejAC6t5i16kw2Yq9MA_QDqR12LH"
   }
   // Secrets (set with `npx wrangler secret put NAME`):
   //   SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
