@@ -44,7 +44,7 @@ textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
 </style>
 </head>
 <body>
-<header class="bar"><div><a href="/landing/">THE ARIMATHEA ACADEMY · ADMIN</a><span id="who" style="color:var(--cream);font-size:13px"></span></div></header>
+<header class="bar"><div><a href="https://thearimatheaacademy.com/landing/">THE ARIMATHEA ACADEMY · ADMIN</a><span id="who" style="color:var(--cream);font-size:13px"></span></div></header>
 
 <!-- Login -->
 <main id="login" class="wrap hidden">
@@ -155,12 +155,12 @@ $('#loginForm').addEventListener('submit', async (e) => {
   const { error } = await sb.auth.signInWithPassword({ email: $('#le').value, password: $('#lp').value });
   if (error) { $('#loginErr').textContent = error.message; $('#loginErr').style.display = 'block'; }
 });
-$('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/landing/admin/' } });
+$('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
 $('#forgot').onclick = async (e) => {
   e.preventDefault();
   const email = $('#le').value || prompt('Your admin email');
   if (!email) return;
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/landing/admin/#reset' });
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/#reset' });
   toast('If that account exists, a reset link has been sent.');
 };
 sbReady();

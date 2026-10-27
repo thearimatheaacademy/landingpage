@@ -14,7 +14,7 @@ Kingdom School of Business & Ministry Bootcamp.
 - `/landing/`: landing page (built from the design)
 - `/landing/register/`: form that hands off to Stripe Checkout
 - `/landing/success/`, `/landing/cancelled/`, `/privacy/`, `/terms/`
-- `/landing/admin/`: dashboard (registrants, paid / not paid, CSV, notes, manual "mark paid",
+- `dashboard.thearimatheaacademy.com`: admin dashboard (registrants, paid / not paid, CSV, notes, manual "mark paid",
   send payment link, compose & schedule emails, edit automations, Zoom link settings)
 
 ## How payment status works
@@ -36,7 +36,7 @@ The Zoom link is set in Admin → Settings.
 ### 1. Supabase
 1. Create a project in the *thearimatheaacademy* org (region `eu-west-2`, London).
 2. Run `supabase/migrations/0001_init.sql` in the SQL editor (or `supabase db push`).
-3. In Auth → URL configuration, set the Site URL to `https://thearimatheaacademy.com/landing/admin/`
+3. In Auth → URL configuration, set the Site URL to `https://dashboard.thearimatheaacademy.com/`
    and add it to Redirect URLs. Optional: Auth → Providers → Google (needs a Google OAuth client).
 4. Create the first admin:
    `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run create-admin -- admin@thearimatheaacademy.com 'StrongPassword'`

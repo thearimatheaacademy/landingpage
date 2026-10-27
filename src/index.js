@@ -7,6 +7,13 @@ const BASE = '/landing';
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const onDashboard = url.hostname === new URL(env.DASHBOARD_URL).hostname;
+
+    // The admin lives at the dashboard subdomain root; the old /landing/admin/ path redirects there.
+    if (!onDashboard && url.pathname.startsWith(`${BASE}/admin`)) return Response.redirect(env.DASHBOARD_URL, 301);
+    if (onDashboard && url.pathname === '/') return env.ASSETS.fetch(new Request(new URL(`${BASE}/admin/`, url), request));
+    if (onDashboard && !url.pathname.startsWith(`${BASE}/`)) return Response.redirect(`${url.origin}/`, 302);
+
     if (url.pathname === BASE) return Response.redirect(`${url.origin}${BASE}/`, 301);
 
     const api = url.pathname.startsWith(`${BASE}/api/`) ? url.pathname.slice(`${BASE}/api`.length) : null;
