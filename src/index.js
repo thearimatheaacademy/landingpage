@@ -63,6 +63,7 @@ async function register(request, env, db) {
   };
   if (!r.first_name || !r.last_name) return json({ error: 'Please enter your first and last name.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) return json({ error: 'Please enter a valid email address.' }, 400);
+  if (!r.phone || r.phone.replace(/\D/g, '').length < 7) return json({ error: 'Please enter your phone / WhatsApp number.' }, 400);
   if (body.accept_terms !== true) return json({ error: 'Please accept the terms to continue.' }, 400);
 
   const { data: existing, error: findErr } = await db.from('registrants').select('*').eq('email', r.email).maybeSingle();

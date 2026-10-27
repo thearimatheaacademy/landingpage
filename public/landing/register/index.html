@@ -15,7 +15,7 @@
 </div>
 <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
 <div class="grid">
-<div class="field"><label for="phone">Phone / WhatsApp <span class="opt">(optional)</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40"></div>
+<div class="field"><label for="phone">Phone / WhatsApp</label><input id="phone" name="phone" type="tel" autocomplete="tel" required maxlength="40" placeholder="+44 7700 900000"></div>
 <div class="field"><label for="country">Country</label><input id="country" name="country" autocomplete="country-name" maxlength="80" value="United Kingdom"></div>
 </div>
 <div class="field"><label for="organisation">Church or organisation <span class="opt">(optional)</span></label><input id="organisation" name="organisation" maxlength="200"></div>
@@ -38,6 +38,7 @@ f.addEventListener('submit', async (e) => {
   const d = Object.fromEntries(new FormData(f));
   if (!d.first_name.trim() || !d.last_name.trim()) return show('Please enter your first and last name.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) return show('Please enter a valid email address.');
+  if (d.phone.replace(/\D/g, '').length < 7) return show('Please enter your phone / WhatsApp number.');
   if (!d.accept_terms) return show('Please accept the terms to continue.');
   d.accept_terms = true; d.marketing_consent = !!d.marketing_consent;
   go.disabled = true; go.textContent = 'TAKING YOU TO PAYMENT…';
