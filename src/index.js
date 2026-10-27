@@ -11,6 +11,9 @@ export default {
     const apps = [[env.DASHBOARD_URL, `${BASE}/admin/`], [env.LMS_URL, `${BASE}/lms/`]];
     const app = apps.find(([u]) => url.hostname === new URL(u).hostname);
     if (app) {
+      // Browsers request these from the site root automatically.
+      const rootIcons = { '/favicon.ico': 'favicon.ico', '/apple-touch-icon.png': 'apple-touch-icon.png' };
+      if (rootIcons[url.pathname]) return env.ASSETS.fetch(new Request(new URL(`${BASE}/icons/${rootIcons[url.pathname]}`, url), request));
       if (url.pathname === '/') return env.ASSETS.fetch(new Request(new URL(app[1], url), request));
       if (!url.pathname.startsWith(`${BASE}/`)) return Response.redirect(`${url.origin}/`, 302);
     } else {
