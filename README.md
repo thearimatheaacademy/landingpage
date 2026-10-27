@@ -48,7 +48,7 @@ The Zoom link is set in Admin → Settings.
 - Optional: set `STRIPE_PRICE_ID` to an existing £150 price. Otherwise the price is created inline.
 
 ### 3. Resend
-Add the domain `thearimatheaacademy.com`, add its DNS records (SPF/DKIM) in Cloudflare DNS and create an API key.
+Add and verify the sending subdomain `kingdomschool.thearimatheaacademy.com` (kept separate from the root domain for deliverability), add its DNS records (SPF/DKIM) in Cloudflare DNS and create an API key.
 
 ### 4. Domain: GoDaddy → Cloudflare
 A Worker can only serve `thearimatheaacademy.com/landing` if the domain's DNS is on Cloudflare:
