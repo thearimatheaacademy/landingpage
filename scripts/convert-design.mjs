@@ -15,7 +15,7 @@ h = h.replace('<meta charset="utf-8">', `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="A 15-week online programme equipping you with spiritual insight and practical knowledge to build your business or ministry. Starts Friday 11 December 2026. £150.">
 <meta property="og:title" content="Kingdom School of Business &amp; Ministry Bootcamp">
-<meta property="og:image" content="https://thearimatheaacademy.com/landing/img/speaker-03.png">
+<meta property="og:image" content="https://thearimatheaacademy.com/landing/icons/share.jpg">
 <link rel="icon" href="/landing/icons/favicon.ico" sizes="32x32"><link rel="icon" href="/landing/icons/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/landing/icons/apple-touch-icon.png">`);
 h = h.replace('</head>', headExtra + '</head>');
 // lazy-load speaker images below the fold
