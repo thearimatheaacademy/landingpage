@@ -305,15 +305,22 @@ window.addEventListener('hashchange', () => { if (!location.hash.includes('acces
 
 // ── Auth ──
 let sb, people = [];
+
+// If anything goes wrong while loading, say so instead of leaving a blank page.
+function fail(err) {
+  console.error(err);
+  document.body.insertAdjacentHTML('beforeend', `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#FBF5E3;z-index:50;padding:24px;font-family:Poppins,sans-serif"><div style="max-width:460px"><h1 style="font-family:Anton,sans-serif;color:#23571F;text-transform:uppercase">Something went wrong</h1><p>The page couldn't load. Please refresh. If it keeps happening, send this to info@thearimatheaacademy.com:</p><pre style="white-space:pre-wrap;background:#fff;border:1px solid #ECE2C4;padding:12px;font-size:12px">${String(err?.message || err).replace(/[<>&]/g, '')}</pre><button onclick="location.reload()" style="background:#23571F;color:#FBF5E3;border:0;padding:12px 20px;font:500 14px Oswald,sans-serif;letter-spacing:.14em;cursor:pointer">REFRESH</button></div></div>`);
+}
 (async function init() {
   const cfg = await fetch('/landing/api/config').then((r) => r.json());
   sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+  // Supabase must not be queried inside this callback (it deadlocks), so defer the work.
   sb.auth.onAuthStateChange((evt, session) => {
     if (evt === 'PASSWORD_RECOVERY') return setTimeout(changePassword, 300);
-    route(session);
+    setTimeout(() => route(session).catch(fail), 0);
   });
-  route((await sb.auth.getSession()).data.session);
-})();
+  await route((await sb.auth.getSession()).data.session);
+})().catch(fail);
 
 let routed = null;
 async function route(session) {
