@@ -5,7 +5,7 @@ Kingdom School of Business & Ministry Bootcamp.
 
 | Piece | Where |
 |---|---|
-| Hosting, API, email scheduler (cron every 5 min) | Cloudflare Worker `landing` (`src/`) + static pages (`public/landing/`) |
+| Hosting, API, email scheduler (cron every 5 min) | Cloudflare Worker `landingpage` (`src/`) + static pages (`public/landing/`) |
 | Database, admin login (email/password + Google OAuth), access control (RLS) | Supabase (`supabase/migrations/`) |
 | Payments (£150, GBP) | Stripe Checkout + webhook |
 | Email delivery | Resend |
