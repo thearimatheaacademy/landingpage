@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kingdomschool",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+    "run_worker_first": ["/kingdomschool/api/*", "/kingdomschool"]
+  },
+  // Serves only /kingdomschool on the main domain; the rest of arimatheaacademy.com is untouched.
+  // Requires arimatheaacademy.com to use Cloudflare nameservers (see README).
+  "routes": [
+    { "pattern": "arimatheaacademy.com/kingdomschool*", "zone_name": "arimatheaacademy.com" },
+    { "pattern": "www.arimatheaacademy.com/kingdomschool*", "zone_name": "arimatheaacademy.com" }
+  ],
+  "workers_dev": true,
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "observability": { "enabled": true },
+  "vars": {
+    "SITE_URL": "https://arimatheaacademy.com/kingdomschool",
+    "EMAIL_FROM": "The Arimathea Academy <kingdomschool@arimatheaacademy.com>",
+    "EMAIL_REPLY_TO": "",
+    "SUPABASE_URL": "https://YOUR-PROJECT-REF.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_REPLACE_ME"
+  }
+  // Secrets (set with `npx wrangler secret put NAME`):
+  //   SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
+  //   optional: STRIPE_PRICE_ID (use an existing £150 Price instead of an inline price)
+}

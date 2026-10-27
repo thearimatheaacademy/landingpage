@@ -1,0 +1,17 @@
+{
+  "name": "kingdomschool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "create-admin": "node scripts/create-admin.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
