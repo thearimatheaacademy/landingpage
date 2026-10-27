@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Student Portal · The Arimathea Academy</title>
+<link rel="icon" href="/landing/img/speaker-03.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1E3A1B;--green:#23571F;--green-d:#163A13;--gold:#E9D08A;--cream:#FBF5E3;--cream2:#FBF7EA;--line:#ECE2C4;--ink:#2B2A24;--muted:#7a7458;--sub:#6b6650;--err:#9B2C1F;--side:248px}
+*{box-sizing:border-box}
+body{margin:0;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:var(--cream);font-size:15px;line-height:1.6}
+a{color:var(--green)}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+svg{flex:none}
+
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);background:var(--forest);color:#cfd8c9;display:flex;flex-direction:column;padding:22px 14px;z-index:5}
+.brand{font:600 12px Oswald,sans-serif;letter-spacing:.3em;color:var(--gold);padding:4px 10px 26px;text-decoration:none}
+.brand b{display:block;font:400 22px Anton,sans-serif;letter-spacing:.02em;color:#fff;margin-top:6px}
+.nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;color:#cfd8c9;text-decoration:none;margin-bottom:2px;font-size:14px}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(233,208,138,.14);color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.sep{font:500 11px Oswald,sans-serif;letter-spacing:.2em;color:#7f9478;padding:18px 12px 8px}
+.livebox{margin:18px 4px 0;padding:14px;border:1px solid rgba(233,208,138,.3);font-size:13px}
+.livebox b{display:block;color:var(--gold);font:500 12px Oswald,sans-serif;letter-spacing:.16em;margin-bottom:4px}
+.me{margin-top:auto;display:flex;gap:10px;align-items:center;padding:12px;border-top:1px solid rgba(255,255,255,.1)}
+.me>div:nth-child(2){min-width:0;flex:1}
+.av{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--forest);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.me b{display:block;color:#fff;font-size:13px;font-weight:500}
+.me small{display:block;color:#9fb098;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me button{background:none;border:0;color:#9fb098;padding:6px}
+.me button:hover{color:var(--gold)}
+main{margin-left:var(--side);padding:30px 36px 60px;min-height:100vh;max-width:calc(var(--side) + 1100px)}
+
+.mtop,.tabbar{display:none}
+@media(max-width:820px){
+  .side{display:none}
+  main{margin:0;padding:84px 16px 100px}
+  .mtop{display:flex;position:fixed;top:0;left:0;right:0;height:60px;background:var(--forest);align-items:center;justify-content:space-between;padding:0 16px;color:var(--gold);font:600 12px Oswald,sans-serif;letter-spacing:.28em;z-index:5}
+  .tabbar{display:grid;position:fixed;bottom:0;left:0;right:0;background:var(--forest);grid-template-columns:repeat(3,1fr);padding:8px 0 calc(10px + env(safe-area-inset-bottom));z-index:5}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9fb098;font-size:11px;text-decoration:none}
+  .tabbar a.on{color:var(--gold)}
+}
+
+.crumb{font:500 12px Oswald,sans-serif;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+h1{font-family:Anton,sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(28px,4vw,40px);margin:2px 0 18px;color:var(--green);letter-spacing:.01em;line-height:1.08}
+h2{font:600 19px Oswald,sans-serif;color:var(--green);margin:30px 0 12px;letter-spacing:.02em}
+.btn{display:inline-flex;gap:8px;align-items:center;justify-content:center;font:500 14px Oswald,sans-serif;letter-spacing:.14em;text-transform:uppercase;background:var(--green);color:var(--cream);border:1px solid var(--green);padding:12px 20px;text-decoration:none}
+.btn:hover{background:var(--green-d);color:var(--cream)}
+.btn.ghost{background:#fff;color:var(--green)}
+.btn.gold{background:var(--gold);color:var(--forest);border-color:var(--gold)}
+.btn.gold:hover{background:#F3DFA0}
+.btn[disabled]{opacity:.55;cursor:wait}
+.panel{background:#fff;border:1px solid var(--line)}
+.pad{padding:22px}
+
+.hero{background:#E9D28C url(/landing/img/gold-texture.jpg) repeat;background-size:1200px 600px;padding:28px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;margin-bottom:24px}
+.hero .when{font:400 clamp(26px,3.4vw,40px)/1.05 Anton,sans-serif;color:var(--forest);text-transform:uppercase}
+.hero p{margin:6px 0 0;color:#3D3B33}
+@media(max-width:700px){.hero{grid-template-columns:1fr;padding:22px}}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:8px}
+.stat{background:#fff;border:1px solid var(--line);padding:16px 18px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font:400 30px Anton,sans-serif;color:var(--forest)}
+.prog{height:8px;background:#F1EAD2;margin-top:8px}.prog i{display:block;height:100%;background:#2F7A2A}
+@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;background:#fff;border:1px solid var(--line);padding:14px 18px;text-decoration:none;color:inherit}
+.item:hover{border-color:#d9cea8;background:#FFFCF2}
+.wk{font:400 14px Oswald,sans-serif;letter-spacing:.12em;color:var(--muted);text-align:center;line-height:1.1}
+.wk b{display:block;font:400 28px Anton,sans-serif;color:var(--green);letter-spacing:0}
+.item h3{margin:0;font-size:16px;font-weight:600}
+.item .meta{font-size:13px;color:var(--sub)}
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.tag.rec{background:#DCEFD8;color:#1d5a19}.tag.done{background:var(--forest);color:var(--gold)}.tag.soon{background:#FBECCB;color:#7a5410}.tag.wait{background:#eee;color:#555}.tag.live{background:#9B2C1F;color:#fff}
+@media(max-width:600px){.item{grid-template-columns:48px 1fr;padding:12px 14px}.item .tag{grid-column:2;justify-self:start}}
+
+.video{position:relative;aspect-ratio:16/9;background:#111;margin-bottom:18px}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.novideo{aspect-ratio:16/9;background:var(--forest);color:var(--gold);display:grid;place-items:center;text-align:center;padding:24px;margin-bottom:18px}
+.novideo b{display:block;font:400 clamp(22px,3vw,34px) Anton,sans-serif;text-transform:uppercase;color:#fff}
+.res a{display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #F3ECD6;text-decoration:none}
+.res a:first-child{border-top:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* Login */
+.auth{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.auth .art{background:#E9D28C url(/landing/img/gold-texture.jpg) repeat;background-size:1200px 600px;padding:48px;display:flex;flex-direction:column;justify-content:space-between;gap:24px}
+.auth .art .t{font:600 12px Oswald,sans-serif;letter-spacing:.3em;color:var(--green)}
+.auth .art b{font:400 clamp(40px,5.2vw,72px)/.98 Anton,sans-serif;text-transform:uppercase;color:#5F5F5F}
+.auth .art b span{color:#3B8036;display:block}
+.auth .box{align-self:center;justify-self:center;width:min(420px,100% - 32px);padding:32px 0}
+label{display:block;font-weight:500;font-size:13px;margin-bottom:6px}
+input{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid #cfc4a0;background:#fffdf6;color:var(--ink)}
+input:focus{outline:2px solid var(--green);outline-offset:1px}
+.note{padding:12px 14px;margin:0 0 16px;font-size:14px}
+.note.ok{background:#DCEFD8;color:#1d5a19}.note.err{background:#FBE9E5;color:var(--err)}
+@media(max-width:820px){.auth{grid-template-columns:1fr}.auth .art{padding:28px 20px}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--forest);color:var(--cream);padding:12px 20px;display:none;z-index:20}
+@media(max-width:820px){#toast{bottom:90px}}
+</style>
+</head>
+<body>
+
+<!-- Sign in -->
+<section id="login" class="auth hidden">
+  <div class="art">
+    <div class="t">THE ARIMATHEA ACADEMY</div>
+    <b>Kingdom School<span>Student Portal</span></b>
+    <div style="color:#3D3B33;font-size:14px">Session recordings, resources and your live Zoom link, all in one place.</div>
+  </div>
+  <div class="box">
+    <h1>Sign in</h1>
+    <div id="loginNote" class="note hidden"></div>
+    <form id="loginForm">
+      <label for="le">The email you registered with</label>
+      <input id="le" type="email" autocomplete="email" required>
+      <button class="btn" style="width:100%;margin-top:14px">Email me a sign-in link</button>
+    </form>
+    <button type="button" class="btn ghost" id="google" style="width:100%;margin-top:10px">Continue with Google</button>
+    <p style="font-size:13px;color:var(--sub);margin-top:18px">Not registered yet? <a href="https://thearimatheaacademy.com/landing/register/">Secure your place</a>.</p>
+  </div>
+</section>
+
+<!-- Signed in but no paid registration -->
+<section id="nope" class="auth hidden">
+  <div class="art"><div class="t">THE ARIMATHEA ACADEMY</div><b>Almost<span>there</span></b><div></div></div>
+  <div class="box">
+    <h1>No active place found</h1>
+    <p>We couldn't find a paid registration for <strong id="nopeEmail"></strong>. If you paid with a different email, sign out and use that one. If you've just paid, wait a minute and refresh.</p>
+    <div class="row"><a class="btn" href="https://thearimatheaacademy.com/landing/register/">Register</a><button class="btn ghost" data-signout>Sign out</button></div>
+    <p style="font-size:13px;color:var(--sub);margin-top:18px">Need help? Email <a href="mailto:info@thearimatheaacademy.com">info@thearimatheaacademy.com</a></p>
+  </div>
+</section>
+
+<!-- Portal -->
+<div id="app" class="hidden">
+  <aside class="side">
+    <a class="brand" href="#home">THE ARIMATHEA ACADEMY<b>Kingdom School</b></a>
+    <nav class="nav" id="nav"></nav>
+    <div class="livebox hidden" id="sideLive"></div>
+    <div class="me"><div class="av" id="meAv"></div><div><b id="meName"></b><small id="meEmail"></small></div>
+      <button data-signout title="Sign out" aria-label="Sign out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></div>
+  </aside>
+  <div class="mtop">KINGDOM SCHOOL <div class="av" id="meAv2" style="width:30px;height:30px;font-size:11px"></div></div>
+  <nav class="tabbar" id="tabbar"></nav>
+  <main id="main"></main>
+</div>
+<div id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3500); };
+const show = (id) => ['login', 'nope', 'app'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
+const longDate = (d) => new Date(d).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Europe/London' }).replace(' at ', ' · ');
+const shortDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
+const I = {
+  home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  sessions: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z"/><path d="M8 21h8"/>',
+  account: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  play: '<path d="M6 4l14 8-14 8z"/>',
+  link: '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+  check: '<path d="M4 12l5 5L20 6"/>',
+  video: '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/>',
+};
+const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+const NAV = [['home', 'Home'], ['sessions', 'Sessions'], ['account', 'My account']];
+$('#nav').innerHTML = NAV.map(([k, l]) => `<a href="#${k}" data-nav="${k}">${icon(k)}${l}</a>`).join('');
+$('#tabbar').innerHTML = NAV.map(([k, l]) => `<a href="#${k}" data-nav="${k}">${icon(k, 22)}${l}</a>`).join('');
+
+let sb, me = null, reg = null, sessions = [], done = new Set(), live = {};
+
+(async function init() {
+  const cfg = await fetch('/landing/api/config').then((r) => r.json());
+  sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+  sb.auth.onAuthStateChange((_e, session) => start(session));
+  start((await sb.auth.getSession()).data.session);
+})();
+
+let started = null;
+async function start(session) {
+  if (!session) { started = null; return show('login'); }
+  if (started === session.user.id) return;
+  started = session.user.id;
+  me = session.user;
+  if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname + '#home');
+
+  const [{ data: regs }, { data: rows }, { data: prog }, { data: details }] = await Promise.all([
+    sb.from('registrants').select('first_name, last_name, email, status, paid_at').eq('status', 'paid').limit(1),
+    sb.from('sessions').select('*').order('starts_at'),
+    sb.from('session_progress').select('session_id'),
+    sb.rpc('student_live_details'),
+  ]);
+  reg = regs?.[0];
+  if (!reg) { $('#nopeEmail').textContent = me.email; return show('nope'); }
+  sessions = rows || [];
+  done = new Set((prog || []).map((p) => p.session_id));
+  live = details?.[0] || {};
+
+  const name = `${reg.first_name} ${reg.last_name}`;
+  $('#meName').textContent = name; $('#meEmail').textContent = me.email;
+  $('#meAv').textContent = $('#meAv2').textContent = (reg.first_name[0] + (reg.last_name[0] || '')).toUpperCase();
+  const nx = nextSession();
+  if (nx) { $('#sideLive').innerHTML = `<b>NEXT LIVE SESSION</b>${esc(longDate(nx.starts_at))}`; $('#sideLive').classList.remove('hidden'); }
+  show('app');
+  render();
+}
+document.addEventListener('click', (e) => { if (e.target.closest('[data-signout]')) { e.preventDefault(); sb.auth.signOut(); } });
+
+// Sign-in: a one-click link sent by our own server (only paid registrants receive one).
+$('#loginForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button'); btn.disabled = true;
+  await fetch('/landing/api/lms/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('#le').value }) }).catch(() => {});
+  btn.disabled = false;
+  const n = $('#loginNote');
+  n.className = 'note ok';
+  n.textContent = `If ${$('#le').value} has a paid registration, a sign-in link is on its way. Check your inbox (and spam).`;
+};
+$('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
+
+const LIVE_WINDOW = 3 * 3600e3; // a session counts as "live" for 3h after it starts
+const nextSession = () => sessions.find((s) => new Date(s.starts_at).getTime() + LIVE_WINDOW > Date.now());
+const isLive = (s) => { const t = new Date(s.starts_at).getTime(); return Date.now() >= t - 15 * 60e3 && Date.now() < t + LIVE_WINDOW; };
+function tagFor(s) {
+  if (done.has(s.id)) return '<span class="tag done">Watched</span>';
+  if (isLive(s)) return '<span class="tag live">Live now</span>';
+  if (s.recording_url) return '<span class="tag rec">Recording ready</span>';
+  if (new Date(s.starts_at) > new Date()) return '<span class="tag soon">Upcoming</span>';
+  return '<span class="tag wait">Recording coming soon</span>';
+}
+const item = (s) => `<a class="item" href="#session/${s.id}"><div class="wk">WEEK<b>${s.week}</b></div><div><h3>${esc(s.title)}</h3><div class="meta">${esc(longDate(s.starts_at))}${s.speaker ? ' · ' + esc(s.speaker) : ''}</div></div>${tagFor(s)}</a>`;
+
+window.addEventListener('hashchange', render);
+function render() {
+  if (!reg) return;
+  const [page, id] = (location.hash.slice(1) || 'home').split('/');
+  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === (page === 'session' ? 'sessions' : page)));
+  const view = { home, sessions: sessionList, session: () => sessionPage(id), account }[page] || home;
+  $('#main').innerHTML = view();
+  window.scrollTo(0, 0);
+  bind();
+}
+
+function joinButton(s) {
+  if (!live.zoom_link) return '<span class="tag wait">Zoom link coming soon</span>';
+  return `<a class="btn ${isLive(s) ? '' : 'gold'}" href="${esc(live.zoom_link)}" target="_blank" rel="noopener">${icon('video', 18)} Join on Zoom</a>`;
+}
+
+function home() {
+  const nx = nextSession();
+  const watched = sessions.filter((s) => done.has(s.id)).length;
+  const recorded = sessions.filter((s) => s.recording_url);
+  const latest = recorded.at(-1);
+  return `
+    <div class="crumb">Welcome back</div><h1>Hello, ${esc(reg.first_name)}</h1>
+    ${nx ? `<section class="hero"><div><div class="crumb" style="color:var(--green)">${isLive(nx) ? 'Happening now' : 'Next live session'} · Week ${nx.week}</div>
+      <div class="when">${esc(longDate(nx.starts_at))}</div><p>${esc(nx.title)}${nx.speaker ? ' with ' + esc(nx.speaker) : ''} · Online via Zoom${live.zoom_passcode ? ' · Passcode ' + esc(live.zoom_passcode) : ''}</p></div>
+      <div>${joinButton(nx)}</div></section>`
+      : '<section class="hero"><div><div class="when">The programme is complete</div><p>All recordings remain available below.</p></div></section>'}
+    <div class="stats">
+      <div class="stat"><span>Sessions</span><b>${sessions.length}</b></div>
+      <div class="stat"><span>Recordings available</span><b>${recorded.length}</b></div>
+      <div class="stat"><span>You've watched</span><b>${watched}/${sessions.length}</b><div class="prog"><i style="width:${sessions.length ? (watched / sessions.length) * 100 : 0}%"></i></div></div>
+    </div>
+    ${latest ? `<h2>Latest recording</h2><div class="list">${item(latest)}</div>` : ''}
+    <h2>Coming up</h2>
+    <div class="list">${sessions.filter((s) => new Date(s.starts_at).getTime() + LIVE_WINDOW > Date.now()).slice(0, 3).map(item).join('') || '<p class="meta">No upcoming sessions.</p>'}</div>
+    <p style="margin-top:18px"><a href="#sessions">See all ${sessions.length} sessions →</a></p>`;
+}
+
+function sessionList() {
+  return `<div class="crumb">15 weeks · Every Friday</div><h1>Sessions</h1><div class="list">${sessions.map(item).join('')}</div>`;
+}
+
+function embed(url) {
+  try {
+    const u = new URL(url);
+    const yt = u.hostname.includes('youtu') && (u.searchParams.get('v') || (u.hostname === 'youtu.be' && u.pathname.slice(1)) || u.pathname.split('/embed/')[1]);
+    if (yt) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(yt)}?rel=0`;
+    const vm = u.hostname.includes('vimeo.com') && u.pathname.match(/\/(\d+)/);
+    if (vm) return `https://player.vimeo.com/video/${vm[1]}`;
+  } catch {}
+  return null;
+}
+
+function sessionPage(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return '<h1>Session not found</h1><a href="#sessions">Back to sessions</a>';
+  const src = s.recording_url && embed(s.recording_url);
+  const i = sessions.indexOf(s), prev = sessions[i - 1], next = sessions[i + 1];
+  const video = src ? `<div class="video"><iframe src="${esc(src)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${esc(s.title)}"></iframe></div>`
+    : s.recording_url ? `<div class="novideo"><div><b>Recording ready</b><p>This recording opens on its own page.</p><a class="btn gold" href="${esc(s.recording_url)}" target="_blank" rel="noopener">${icon('play', 16)} Watch recording</a></div></div>`
+    : `<div class="novideo"><div><b>${new Date(s.starts_at) > new Date() ? 'Live on ' + esc(shortDate(s.starts_at)) : 'Recording coming soon'}</b><p>${esc(longDate(s.starts_at))}</p>${new Date(s.starts_at).getTime() + LIVE_WINDOW > Date.now() ? joinButton(s) : ''}</div></div>`;
+  const res = Array.isArray(s.resources) ? s.resources.filter((r) => r && r.url) : [];
+  return `
+    <a href="#sessions" style="font-size:14px">← All sessions</a>
+    <div class="crumb" style="margin-top:14px">Week ${s.week} · ${esc(longDate(s.starts_at))}</div>
+    <h1>${esc(s.title)}</h1>
+    ${video}
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <div class="meta">${s.speaker ? 'With <strong>' + esc(s.speaker) + '</strong>' : ''}</div>
+      ${s.recording_url ? `<button class="btn ${done.has(s.id) ? 'ghost' : ''}" id="markDone">${icon('check', 16)} ${done.has(s.id) ? 'Watched' : 'Mark as watched'}</button>` : ''}
+    </div>
+    ${s.description ? `<div class="panel pad" style="white-space:pre-line">${esc(s.description)}</div>` : ''}
+    ${res.length ? `<h2>Resources</h2><div class="panel pad res">${res.map((r) => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${icon('link', 18)}${esc(r.label || r.url)}</a>`).join('')}</div>` : ''}
+    <div class="row" style="justify-content:space-between;margin-top:28px">
+      ${prev ? `<a class="btn ghost" href="#session/${prev.id}">← Week ${prev.week}</a>` : '<span></span>'}
+      ${next ? `<a class="btn ghost" href="#session/${next.id}">Week ${next.week} →</a>` : ''}
+    </div>`;
+}
+
+function account() {
+  return `<div class="crumb">Kingdom School</div><h1>My account</h1>
+    <div class="panel pad" style="max-width:640px">
+      <p style="margin-top:0"><strong>${esc(reg.first_name)} ${esc(reg.last_name)}</strong><br>${esc(me.email)}</p>
+      <p>Place confirmed${reg.paid_at ? ' on ' + esc(new Date(reg.paid_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p>
+      ${live.zoom_link ? `<p>Live sessions: every Friday${live.session_time ? ', ' + esc(live.session_time) : ''}.<br>Zoom link: <a href="${esc(live.zoom_link)}" target="_blank" rel="noopener">${esc(live.zoom_link)}</a>${live.zoom_passcode ? '<br>Passcode: ' + esc(live.zoom_passcode) : ''}</p>` : ''}
+      <p>Need help? Email <a href="mailto:info@thearimatheaacademy.com">info@thearimatheaacademy.com</a></p>
+      <button class="btn ghost" data-signout>Sign out</button>
+    </div>`;
+}
+
+function bind() {
+  const b = $('#markDone');
+  if (!b) return;
+  b.onclick = async () => {
+    const id = location.hash.split('/')[1];
+    b.disabled = true;
+    const { error } = done.has(id)
+      ? await sb.from('session_progress').delete().eq('session_id', id)
+      : await sb.from('session_progress').insert({ session_id: id });
+    if (error) { b.disabled = false; return toast(error.message); }
+    done.has(id) ? done.delete(id) : done.add(id);
+    render();
+  };
+}
+</script>
+</body>
+</html>

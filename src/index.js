@@ -1,18 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 import { createCheckoutSession, verifyStripeSignature, stripeRequest } from './stripe.js';
-import { runScheduler, sendToRegistrant, sendManual } from './email.js';
+import { runScheduler, sendToRegistrant, sendManual, sendLoginEmail } from './email.js';
 
 const BASE = '/landing';
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const onDashboard = url.hostname === new URL(env.DASHBOARD_URL).hostname;
-
-    // The admin lives at the dashboard subdomain root; the old /landing/admin/ path redirects there.
-    if (!onDashboard && url.pathname.startsWith(`${BASE}/admin`)) return Response.redirect(env.DASHBOARD_URL, 301);
-    if (onDashboard && url.pathname === '/') return env.ASSETS.fetch(new Request(new URL(`${BASE}/admin/`, url), request));
-    if (onDashboard && !url.pathname.startsWith(`${BASE}/`)) return Response.redirect(`${url.origin}/`, 302);
+    // Subdomain apps share this Worker: each one's root serves its page under /landing/.
+    const apps = [[env.DASHBOARD_URL, `${BASE}/admin/`], [env.LMS_URL, `${BASE}/lms/`]];
+    const app = apps.find(([u]) => url.hostname === new URL(u).hostname);
+    if (app) {
+      if (url.pathname === '/') return env.ASSETS.fetch(new Request(new URL(app[1], url), request));
+      if (!url.pathname.startsWith(`${BASE}/`)) return Response.redirect(`${url.origin}/`, 302);
+    } else {
+      // On the main domain, the app paths redirect to their subdomains.
+      const moved = apps.find(([, path]) => url.pathname.startsWith(path.slice(0, -1)));
+      if (moved) return Response.redirect(moved[0], 301);
+    }
 
     if (url.pathname === BASE) return Response.redirect(`${url.origin}${BASE}/`, 301);
 
@@ -27,6 +32,8 @@ export default {
       if (api === '/stripe-webhook' && request.method === 'POST') return await stripeWebhook(request, env, ctx);
       if (api === '/register' && request.method === 'POST') return await register(request, env, adminClient(env));
       if (api === '/pay' && request.method === 'GET') return await resumePayment(url, env, adminClient(env));
+      if (api === '/lms/claim' && request.method === 'GET') return await claimAfterPayment(url, env, adminClient(env), ctx);
+      if (api === '/lms/login' && request.method === 'POST') return await sendLoginLink(request, env, adminClient(env));
       // Admins see the real error (e.g. a Stripe refund failure); the public never does.
       if (api.startsWith('/admin/')) return await adminApi(api, request, env, adminClient(env)).catch((e) => json({ error: e.message }, 500));
       return json({ error: 'Not found' }, 404);
@@ -129,6 +136,48 @@ async function stripeWebhook(request, env, ctx) {
     await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', obj.payment_intent);
   }
   return json({ received: true });
+}
+
+// ── Student portal (LMS) sign-in ─────────────────────────────
+// Stripe's success_url lands here: confirm the payment, then sign the student straight into the portal.
+async function claimAfterPayment(url, env, db, ctx) {
+  const sessionId = url.searchParams.get('session_id') || '';
+  if (!/^cs_(test|live)_\w+$/.test(sessionId)) return Response.redirect(env.LMS_URL, 302);
+
+  const session = await stripeRequest(env, 'GET', `/v1/checkout/sessions/${sessionId}`);
+  if (session.payment_status !== 'paid') return Response.redirect(`${env.SITE_URL}/success/?processing=1`, 302);
+
+  // The webhook may not have arrived yet; marking paid here is idempotent.
+  const changed = await markPaidFromSession(db, session);
+  if (changed) ctx.waitUntil(sendToRegistrant(env, db, changed).catch((e) => console.error('confirm email', e)));
+
+  // Auto sign-in only right after checkout; an old link falls back to the normal sign-in page.
+  if (Date.now() / 1000 - session.created > 48 * 3600) return Response.redirect(env.LMS_URL, 302);
+  const { data: registrant } = await db.from('registrants').select('*').eq('id', session.metadata?.registrant_id || session.client_reference_id).maybeSingle();
+  if (registrant?.status !== 'paid') return Response.redirect(env.LMS_URL, 302);
+  return Response.redirect(await magicLink(env, db, registrant, env.LMS_URL), 302);
+}
+
+// Email a one-click sign-in link to a paid registrant. Always answers the same way so emails can't be probed.
+async function sendLoginLink(request, env, db) {
+  const { email } = await request.json().catch(() => ({}));
+  const addr = clean(email, 254).toLowerCase();
+  const { data: registrant } = await db.from('registrants').select('*').eq('email', addr).eq('status', 'paid').maybeSingle();
+  if (registrant) {
+    const since = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count } = await db.from('email_log').select('id', { count: 'exact', head: true }).eq('registrant_id', registrant.id).eq('kind', 'login').gte('created_at', since);
+    if (!count) await sendLoginEmail(env, db, registrant, await magicLink(env, db, registrant, env.LMS_URL));
+  }
+  return json({ ok: true });
+}
+
+async function magicLink(env, db, registrant, redirectTo) {
+  // Create the student's account on first use (ignored if it already exists).
+  await db.auth.admin.createUser({ email: registrant.email, email_confirm: true, user_metadata: { name: `${registrant.first_name} ${registrant.last_name}` } });
+  const { data, error } = await db.auth.admin.generateLink({ type: 'magiclink', email: registrant.email, options: { redirectTo } });
+  if (error) throw error;
+  if (data.user && registrant.user_id !== data.user.id) await db.from('registrants').update({ user_id: data.user.id }).eq('id', registrant.id);
+  return data.properties.action_link;
 }
 
 // Marks the session's registrant as paid. Returns the registrant only if this call changed them.

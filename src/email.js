@@ -75,6 +75,13 @@ export async function sendManual(env, db, ids, subject, html) {
   return { sent: results.filter((r) => r.status === 'sent').length, failed: results.filter((r) => r.status === 'failed').length };
 }
 
+export async function sendLoginEmail(env, db, registrant, link) {
+  const html = `<p>Dear {{first_name}},</p><p>Here is your sign-in link for the Kingdom School student portal:</p>
+<p style="margin:24px 0"><a href="${escapeHtml(link)}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">SIGN IN TO THE PORTAL</a></p>
+<p>The link works once and expires in 1 hour. If you didn't ask for it, you can ignore this email.</p><p>The Arimathea Academy</p>`;
+  return deliver(env, db, await loadSettings(db), [{ registrant, kind: 'login', ref_id: null, subject: 'Your Kingdom School sign-in link', html }]);
+}
+
 async function deliver(env, db, settings, queue) {
   if (!queue.length) return [];
   const emails = queue.map(({ registrant, subject, html }) => {
@@ -133,6 +140,7 @@ function mergeVars(env, settings, r) {
     start_date: settings.start_date || '',
     session_time: settings.session_time || '',
     payment_link: `${env.SITE_URL}/api/pay?id=${r.id}&t=${r.pay_token}`,
+    lms_link: env.LMS_URL,
   };
 }
 

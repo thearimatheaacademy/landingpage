@@ -9,7 +9,7 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none",
-    "run_worker_first": ["/landing/api/*", "/landing", "/landing/admin*"]
+    "run_worker_first": ["/landing/api/*", "/landing", "/landing/admin*", "/landing/lms*"]
   },
   // Serves only /landing on the main domain; the rest of thearimatheaacademy.com is untouched.
   // Requires thearimatheaacademy.com to use Cloudflare nameservers (see README).
@@ -17,7 +17,9 @@
     { "pattern": "thearimatheaacademy.com/landing*", "zone_name": "thearimatheaacademy.com" },
     { "pattern": "www.thearimatheaacademy.com/landing*", "zone_name": "thearimatheaacademy.com" },
     // Admin dashboard. Cloudflare creates the DNS record and certificate automatically.
-    { "pattern": "dashboard.thearimatheaacademy.com", "custom_domain": true }
+    { "pattern": "dashboard.thearimatheaacademy.com", "custom_domain": true },
+    // Student portal (LMS).
+    { "pattern": "lms.thearimatheaacademy.com", "custom_domain": true }
   ],
   "workers_dev": true,
   "triggers": { "crons": ["*/5 * * * *"] },
@@ -25,6 +27,7 @@
   "vars": {
     "SITE_URL": "https://thearimatheaacademy.com/landing",
     "DASHBOARD_URL": "https://dashboard.thearimatheaacademy.com/",
+    "LMS_URL": "https://lms.thearimatheaacademy.com/",
     "EMAIL_FROM": "The Arimathea Academy <hello@kingdomschool.thearimatheaacademy.com>",
     "EMAIL_REPLY_TO": "info@thearimatheaacademy.com",
     "SUPABASE_URL": "https://gzklxldsmhhwcolsgptk.supabase.co",

@@ -237,6 +237,14 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
       <div class="panel"><div class="tbl"><table><thead><tr><th>Name</th><th class="hm">Audience</th><th>Timing</th><th class="hm">Subject</th><th>Active</th></tr></thead><tbody id="steps"></tbody></table></div></div>
     </section>
 
+    <!-- Sessions (student portal content) -->
+    <section data-page="sessions" class="hidden">
+      <div class="head"><div><div class="crumb">Student portal · lms.thearimatheaacademy.com</div><h1>Sessions</h1></div>
+        <div class="acts"><a class="btn ghost hm" href="https://lms.thearimatheaacademy.com/" target="_blank">Open portal</a><button class="btn" id="newSession">Add session</button></div></div>
+      <p class="mut" style="margin-top:-8px">What paid students see in the portal. Paste each recording link after the session (YouTube or Vimeo play inside the portal; other links, such as Zoom recordings, open in a new tab).</p>
+      <div class="panel"><div class="tbl"><table><thead><tr><th>Week</th><th>Title</th><th class="hm">Date</th><th>Recording</th><th class="hm">Visible</th></tr></thead><tbody id="sessRows"></tbody></table></div></div>
+    </section>
+
     <!-- Settings -->
     <section data-page="settings" class="hidden">
       <div class="head"><div><div class="crumb">Kingdom School</div><h1>Settings</h1></div></div>
@@ -270,11 +278,12 @@ const I = {
   payments: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
   emails: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/>',
   automations: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  sessions: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z"/><path d="M8 21h8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
   more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['settings', 'Settings', 'PROGRAMME']];
+const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
 
 // Navigation: sidebar on desktop, bottom tab bar (+ More sheet) on phones.
 $('#nav').innerHTML = PAGES.map(([k, l, sep]) => `${sep ? `<div class="sep">${sep}</div>` : ''}<a href="#${k}" data-nav="${k}">${icon(k)}${l}${k === 'registrants' ? '<span class="count" id="navCount"></span>' : ''}</a>`).join('');
@@ -287,7 +296,7 @@ function go() {
   const page = (location.hash.slice(1).split('?')[0] || 'overview');
   const p = PAGES.some(([k]) => k === page) ? page : 'overview';
   $$('[data-page]').forEach((s) => s.classList.toggle('hidden', s.dataset.page !== p));
-  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === p || (a.dataset.nav === 'more' && ['automations', 'settings'].includes(p))));
+  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === p || (a.dataset.nav === 'more' && ['automations', 'sessions', 'settings'].includes(p))));
   $('#more').classList.remove('open');
   window.scrollTo(0, 0);
   loaders[p]?.();
@@ -423,7 +432,7 @@ async function openPerson(id) {
   const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
   $('#dlgBody').innerHTML = `
     <h3>${esc(p.first_name)} ${esc(p.last_name)} ${pill(p.status)}</h3>
-    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}</dl>
+    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${p.status === 'paid' ? kv('Student portal', p.user_id ? 'Account active' : 'Not signed in yet') : ''}</dl>
     <div class="field"><label for="pNotes">Admin notes</label><textarea id="pNotes" rows="3">${esc(p.notes)}</textarea></div>
     <div class="btns">
       <button class="btn" id="pSave">Save notes</button>
@@ -584,6 +593,46 @@ function editStep(s) {
     dlg.close(); toast('Saved'); loaders.automations();
   };
   if ($('#sDel')) $('#sDel').onclick = async () => { if (!confirm('Delete this step?')) return; await sb.from('email_sequence_steps').delete().eq('id', s.id); dlg.close(); loaders.automations(); };
+  dlg.showModal();
+}
+
+// ── Sessions (student portal) ──
+let sessList = [];
+loaders.sessions = async () => {
+  const { data, error } = await sb.from('sessions').select('*').order('starts_at');
+  if (error) return toast(error.message);
+  sessList = data || [];
+  $('#sessRows').innerHTML = sessList.map((x) => `<tr class="click" data-sess="${x.id}"><td><b>${x.week}</b></td><td>${esc(x.title)}${x.speaker ? `<div class="hint">${esc(x.speaker)}</div>` : ''}</td><td class="hm mut">${fmt(x.starts_at)}</td><td>${x.recording_url ? '<span class="pill paid">Added</span>' : '<span class="pill pending">Not yet</span>'}</td><td class="hm">${x.published ? 'Yes' : '<span class="mut">Hidden</span>'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No sessions yet.</td></tr>';
+};
+$('#sessRows').onclick = (e) => { const tr = e.target.closest('tr[data-sess]'); if (tr) editSession(sessList.find((x) => x.id === tr.dataset.sess)); };
+$('#newSession').onclick = () => {
+  const last = sessList.at(-1);
+  editSession({ week: (last?.week || 0) + 1, title: '', starts_at: last ? new Date(new Date(last.starts_at).getTime() + 7 * 864e5).toISOString() : new Date().toISOString(), resources: [], published: true });
+};
+function editSession(x) {
+  const local = new Date(new Date(x.starts_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+  const resText = (x.resources || []).map((r) => `${r.label || ''} | ${r.url}`).join('\n');
+  $('#dlgBody').innerHTML = `<h3>${x.id ? 'Edit' : 'New'} session</h3>
+    <div class="row2"><div class="field"><label>Week</label><input id="xW" type="number" min="1" value="${esc(x.week)}"></div>
+    <div class="field"><label>Date &amp; time (your local time)</label><input id="xD" type="datetime-local" value="${local}"></div></div>
+    <div class="field"><label>Title</label><input id="xT" value="${esc(x.title)}" placeholder="e.g. Faith and finance"></div>
+    <div class="field"><label>Speaker</label><input id="xS" value="${esc(x.speaker)}" placeholder="e.g. Pastor Kingsley Okonkwo"></div>
+    <div class="field"><label>Recording link</label><input id="xR" value="${esc(x.recording_url)}" placeholder="YouTube, Vimeo or Zoom recording link"></div>
+    <div class="field"><label>Description / notes</label><textarea id="xN" rows="4">${esc(x.description)}</textarea></div>
+    <div class="field"><label>Resources</label><textarea id="xL" rows="3" class="code" placeholder="Slides | https://...">${esc(resText)}</textarea><div class="hint">One per line: <code>Label | https://link</code></div></div>
+    <label class="check"><input type="checkbox" id="xP" ${x.published ? 'checked' : ''}> Visible to students</label>
+    <div class="btns"><button class="btn" id="xGo">Save</button>${x.id ? '<button class="btn danger" id="xDel">Delete</button>' : ''}<button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
+  $('#xGo').onclick = async () => {
+    if (!$('#xT').value.trim()) return toast('Add a title');
+    const resources = $('#xL').value.split('\n').map((l) => l.split('|').map((v) => v.trim())).filter(([, u]) => u && /^https?:\/\//.test(u)).map(([label, url]) => ({ label, url }));
+    const rec = $('#xR').value.trim();
+    if (rec && !/^https?:\/\//.test(rec)) return toast('The recording link must start with https://');
+    const row = { week: Number($('#xW').value), title: $('#xT').value.trim(), speaker: $('#xS').value.trim() || null, starts_at: new Date($('#xD').value).toISOString(), recording_url: rec || null, description: $('#xN').value.trim() || null, resources, published: $('#xP').checked };
+    const { error } = x.id ? await sb.from('sessions').update(row).eq('id', x.id) : await sb.from('sessions').insert(row);
+    if (error) return toast(error.message);
+    dlg.close(); toast('Saved. Students see it straight away.'); loaders.sessions();
+  };
+  if ($('#xDel')) $('#xDel').onclick = async () => { if (!confirm('Delete this session?')) return; await sb.from('sessions').delete().eq('id', x.id); dlg.close(); loaders.sessions(); };
   dlg.showModal();
 }
 

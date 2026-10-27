@@ -8,7 +8,8 @@ export async function createCheckoutSession(env, registrant) {
     'metadata[registrant_id]': registrant.id,
     'payment_intent_data[metadata][registrant_id]': registrant.id,
     'payment_intent_data[description]': 'Kingdom School of Business & Ministry Bootcamp',
-    success_url: `${env.SITE_URL}/success/?session_id={CHECKOUT_SESSION_ID}`,
+    // After paying, students go straight into the portal (see claimAfterPayment).
+    success_url: `${env.SITE_URL}/api/lms/claim?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.SITE_URL}/cancelled/?id=${registrant.id}&t=${registrant.pay_token}`,
     'line_items[0][quantity]': '1',
     // Sessions expire after 24h; the reminder emails create a fresh one via /api/pay.
