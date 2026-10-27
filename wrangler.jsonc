@@ -26,7 +26,7 @@
     "SITE_URL": "https://thearimatheaacademy.com/landing",
     "DASHBOARD_URL": "https://dashboard.thearimatheaacademy.com/",
     "EMAIL_FROM": "The Arimathea Academy <hello@kingdomschool.thearimatheaacademy.com>",
-    "EMAIL_REPLY_TO": "",
+    "EMAIL_REPLY_TO": "info@thearimatheaacademy.com",
     "SUPABASE_URL": "https://gzklxldsmhhwcolsgptk.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PchCejAC6t5i16kw2Yq9MA_QDqR12LH"
   }
