@@ -306,10 +306,17 @@ window.addEventListener('hashchange', () => { if (!location.hash.includes('acces
 // ── Auth ──
 let sb, people = [];
 
+// Visiting ?reset clears the saved sign-in on this device and reloads (escape hatch if the page is stuck).
+function resetSignIn() {
+  try { Object.keys(localStorage).filter((k) => k.startsWith('sb-')).forEach((k) => localStorage.removeItem(k)); } catch {}
+  location.replace(location.pathname);
+}
+if (new URLSearchParams(location.search).has('reset')) resetSignIn();
+
 // If anything goes wrong while loading, say so instead of leaving a blank page.
 function fail(err) {
   console.error(err);
-  document.body.insertAdjacentHTML('beforeend', `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#FBF5E3;z-index:50;padding:24px;font-family:Poppins,sans-serif"><div style="max-width:460px"><h1 style="font-family:Anton,sans-serif;color:#23571F;text-transform:uppercase">Something went wrong</h1><p>The page couldn't load. Please refresh. If it keeps happening, send this to info@thearimatheaacademy.com:</p><pre style="white-space:pre-wrap;background:#fff;border:1px solid #ECE2C4;padding:12px;font-size:12px">${String(err?.message || err).replace(/[<>&]/g, '')}</pre><button onclick="location.reload()" style="background:#23571F;color:#FBF5E3;border:0;padding:12px 20px;font:500 14px Oswald,sans-serif;letter-spacing:.14em;cursor:pointer">REFRESH</button></div></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#FBF5E3;z-index:50;padding:24px;font-family:Poppins,sans-serif"><div style="max-width:460px"><h1 style="font-family:Anton,sans-serif;color:#23571F;text-transform:uppercase">Something went wrong</h1><p>The page couldn't load. Please refresh. If it keeps happening, send this to info@thearimatheaacademy.com:</p><pre style="white-space:pre-wrap;background:#fff;border:1px solid #ECE2C4;padding:12px;font-size:12px">${String(err?.message || err).replace(/[<>&]/g, '')}</pre><button onclick="location.reload()" style="background:#23571F;color:#FBF5E3;border:0;padding:12px 20px;font:500 14px Oswald,sans-serif;letter-spacing:.14em;cursor:pointer">REFRESH</button> <button onclick="resetSignIn()" style="background:#fff;color:#23571F;border:1px solid #23571F;padding:12px 20px;font:500 14px Oswald,sans-serif;letter-spacing:.14em;cursor:pointer">SIGN OUT &amp; RESET</button></div></div>`);
 }
 // Watchdog: if nothing has appeared after 10s, something is stuck (often another open tab holding Supabase's sign-in lock).
 setTimeout(() => {
