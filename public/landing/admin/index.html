@@ -197,7 +197,7 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
     <!-- Registrants -->
     <section data-page="registrants" class="hidden">
       <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Registrants</h1></div>
-        <div class="acts"><button class="btn ghost hm" id="csv">Export CSV</button><button class="btn" id="emailFiltered">Email this list</button></div></div>
+        <div class="acts"><button class="btn ghost" id="importCsv">Import CSV</button><button class="btn ghost hm" id="csv">Export CSV</button><button class="btn" id="emailFiltered">Email this list</button></div></div>
       <div class="stats" id="rgStats"></div>
       <div class="panel">
         <div class="tools">
@@ -417,6 +417,89 @@ function renderPeople() {
 $('#q').oninput = renderPeople;
 $('#chips').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; renderPeople(); } };
 $('#rows').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) openPerson(tr.dataset.id); };
+// ── Import CSV ──
+// Minimal RFC 4180 parser: quoted fields, escaped quotes, commas/newlines inside quotes.
+function parseCsv(text) {
+  const rows = []; let row = [], field = '', q = false;
+  text = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += c; }
+    else if (c === '"') q = true;
+    else if (c === ',' || c === ';' || c === '\t') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((v) => v.trim()));
+}
+const HEADER_ALIASES = {
+  first_name: ['first name', 'firstname', 'first', 'given name', 'forename'],
+  last_name: ['last name', 'lastname', 'last', 'surname', 'family name'],
+  name: ['name', 'full name', 'fullname'],
+  email: ['email', 'email address', 'e-mail', 'mail'],
+  phone: ['phone', 'phone number', 'mobile', 'whatsapp', 'phone / whatsapp', 'telephone', 'tel'],
+  country: ['country'],
+  organisation: ['organisation', 'organization', 'church', 'company', 'church or organisation'],
+  notes: ['notes', 'note', 'comments'],
+  amount: ['amount', 'amount paid', 'paid amount'],
+};
+const headerKey = (h) => { const n = h.trim().toLowerCase().replace(/[_]+/g, ' '); return Object.keys(HEADER_ALIASES).find((k) => k.replace('_', ' ') === n || HEADER_ALIASES[k].includes(n)); };
+
+$('#importCsv').onclick = () => {
+  $('#dlgBody').innerHTML = `<h3>Import registrants</h3>
+    <p class="mut" style="margin-top:0">Upload a CSV with a header row. Recognised columns: <b>first name</b>, <b>last name</b> (or one <b>name</b> column), <b>email</b>, and optionally phone, country, organisation, amount, notes.</p>
+    <div class="field"><input type="file" id="imFile" accept=".csv,text/csv"></div>
+    <div id="imPreview"></div>`;
+  $('#imFile').onchange = async (e) => { const f = e.target.files[0]; if (f) previewImport(await f.text()); };
+  dlg.showModal();
+};
+
+function previewImport(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) return ($('#imPreview').innerHTML = '<p class="err" style="display:block">The file needs a header row and at least one person.</p>');
+  const keys = rows[0].map(headerKey);
+  if (!keys.includes('email')) return ($('#imPreview').innerHTML = '<p class="err" style="display:block">No email column found. Name a column "email".</p>');
+  const existing = new Set(people.map((p) => p.email.toLowerCase()));
+  const seen = new Set(), ok = [], dupes = [], bad = [];
+  rows.slice(1).forEach((r, i) => {
+    const v = {}; keys.forEach((k, j) => { if (k) v[k] = (r[j] || '').trim(); });
+    if (v.name && !v.first_name) { const parts = v.name.split(/\s+/); v.first_name = parts.shift(); v.last_name = v.last_name || parts.join(' '); }
+    const email = (v.email || '').toLowerCase();
+    const line = i + 2;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad.push(`Row ${line}: missing or invalid email`);
+    if (!v.first_name) return bad.push(`Row ${line} (${email}): missing name`);
+    if (existing.has(email) || seen.has(email)) return dupes.push(email);
+    seen.add(email);
+    const amount = Math.round(parseFloat(String(v.amount || '').replace(/[^\d.]/g, '')) * 100);
+    ok.push({ first_name: v.first_name.slice(0, 100), last_name: (v.last_name || '-').slice(0, 100), email, phone: v.phone?.slice(0, 40) || null, country: v.country?.slice(0, 80) || null, organisation: v.organisation?.slice(0, 200) || null, notes: v.notes || null, amount: amount > 0 ? amount : null });
+  });
+  $('#imPreview').innerHTML = `
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin:6px 0 14px">${stat('Ready to import', ok.length, '', 'up')}${stat('Already registered', dupes.length, 'skipped')}${stat('Problems', bad.length, 'skipped', bad.length ? 'warn' : '')}</div>
+    ${bad.length ? `<details style="margin-bottom:12px"><summary class="mut">Show problems</summary><div class="hint">${bad.slice(0, 50).map(esc).join('<br>')}</div></details>` : ''}
+    ${ok.length ? `<div class="panel tbl" style="max-height:220px;overflow:auto;margin-bottom:14px"><table><thead><tr><th>Name</th><th>Email</th><th class="hm">Phone</th></tr></thead><tbody>${ok.slice(0, 100).map((p) => `<tr><td>${esc(p.first_name)} ${esc(p.last_name)}</td><td class="mut">${esc(p.email)}</td><td class="hm mut">${esc(p.phone)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="row2"><div class="field"><label>Import as</label><select id="imStatus"><option value="paid">Paid (can use the student portal)</option><option value="pending">Not paid yet</option></select></div>
+    <div class="field"><label>Payment note</label><input id="imNote" value="Paid before new site (imported)"></div></div>
+    <label class="check"><input type="checkbox" id="imQuiet" checked> Don't send automatic emails (welcome / payment reminders). Fixed-date reminders still go.</label>
+    <div class="btns"><button class="btn" id="imGo">Import ${ok.length} ${ok.length === 1 ? 'person' : 'people'}</button><button class="btn ghost" onclick="dlg.close()">Cancel</button></div>` : '<p class="mut">Nothing new to import.</p>'}`;
+  if (!ok.length) return;
+  $('#imStatus').onchange = () => { $('#imNote').closest('.field').classList.toggle('hidden', $('#imStatus').value !== 'paid'); };
+  $('#imGo').onclick = (e) => busy(e.target, 'Importing…', async () => {
+    const paid = $('#imStatus').value === 'paid';
+    const now = new Date().toISOString();
+    const rowsOut = ok.map(({ amount, ...p }) => ({
+      ...p, source: 'import', skip_auto_emails: $('#imQuiet').checked, status: paid ? 'paid' : 'pending',
+      ...(paid ? { paid_at: now, amount_paid: amount ?? 15000, currency: 'gbp', payment_method_note: $('#imNote').value.trim() || 'Imported' } : {}),
+    }));
+    for (let i = 0; i < rowsOut.length; i += 500) {
+      const { error } = await sb.from('registrants').insert(rowsOut.slice(i, i + 500));
+      if (error) throw new Error(`Stopped after ${i} rows: ${error.message}`);
+    }
+    dlg.close(); toast(`Imported ${rowsOut.length} ${rowsOut.length === 1 ? 'person' : 'people'}`);
+    filter = paid ? 'paid' : 'pending'; await loadPeople(); renderPeople();
+  });
+}
+
 $('#csv').onclick = () => {
   const cols = ['first_name', 'last_name', 'email', 'phone', 'country', 'organisation', 'how_heard', 'goals', 'status', 'amount_paid', 'paid_at', 'created_at', 'marketing_consent', 'notes'];
   const cell = (v) => { let s = String(v ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
@@ -432,7 +515,7 @@ async function openPerson(id) {
   const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
   $('#dlgBody').innerHTML = `
     <h3>${esc(p.first_name)} ${esc(p.last_name)} ${pill(p.status)}</h3>
-    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${p.status === 'paid' ? kv('Student portal', p.user_id ? 'Account active' : 'Not signed in yet') : ''}</dl>
+    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at) + (p.source === 'import' ? ' (imported)' : ''))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${p.status === 'paid' ? kv('Student portal', p.user_id ? 'Account active' : 'Not signed in yet') : ''}</dl>
     <div class="field"><label for="pNotes">Admin notes</label><textarea id="pNotes" rows="3">${esc(p.notes)}</textarea></div>
     <div class="btns">
       <button class="btn" id="pSave">Save notes</button>

@@ -32,3 +32,9 @@ test('fixed-time steps fire only within 24h of send_at', () => {
   assert.equal(dueStep(step, {}, Date.parse('2026-12-01T09:00:00Z')), false);
   assert.equal(dueStep(step, {}, Date.parse('2026-12-02T11:00:00Z')), false);
 });
+
+test('registrants with skip_auto_emails only get fixed-time steps', () => {
+  const r = { skip_auto_emails: true, paid_at: new Date(now).toISOString() };
+  assert.equal(dueStep({ audience: 'paid', delay_hours: 0 }, r, now), false);
+  assert.equal(dueStep({ audience: 'paid', send_at: '2026-12-01T10:00:00Z' }, r, now), true);
+});

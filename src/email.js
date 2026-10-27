@@ -48,6 +48,7 @@ export function dueStep(step, r, now) {
     const at = Date.parse(step.send_at);
     return now >= at && now < at + FIXED_STEP_WINDOW_H * HOUR;
   }
+  if (r.skip_auto_emails) return false; // e.g. imported registrants: only fixed-date steps reach them
   const anchor = Date.parse(step.audience === 'paid' ? r.paid_at : r.created_at);
   if (!anchor) return false;
   const at = anchor + Number(step.delay_hours) * HOUR;
