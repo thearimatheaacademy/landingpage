@@ -4,152 +4,325 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Admin · Kingdom School</title>
+<title>Admin · The Arimathea Academy</title>
+<link rel="icon" href="/landing/img/speaker-03.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/landing/site.css">
 <style>
-.wide{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--forest);margin-bottom:24px}
-.tabs button{font-family:'Oswald',sans-serif;letter-spacing:.12em;font-size:14px;padding:12px 18px;border:0;background:var(--cream2);cursor:pointer;color:var(--forest)}
-.tabs button.on{background:var(--forest);color:var(--gold)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.stat{background:#fff;border:1px solid #e7dcb8;padding:16px 18px}
-.stat b{display:block;font-family:'Anton',sans-serif;font-weight:400;font-size:32px;color:var(--green)}
-.stat span{font-size:13px;color:var(--muted)}
-.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-.tools input,.tools select{width:auto;min-width:200px;padding:9px 12px;font-size:14px}
-.sbtn{font-family:'Oswald',sans-serif;letter-spacing:.1em;font-size:13px;padding:9px 16px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
-.sbtn.p{background:var(--green);color:var(--cream)}
-.sbtn.d{border-color:var(--err);color:var(--err)}
-.tbl{overflow-x:auto;background:#fff;border:1px solid #e7dcb8}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #f0e8cf;white-space:nowrap}
-th{background:var(--cream2);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
-tbody tr{cursor:pointer}tbody tr:hover{background:#fffaea}
-.pill{display:inline-block;padding:2px 10px;font-size:12px;font-weight:600;border-radius:99px}
-.pill.paid{background:#dcefd8;color:#1d5a19}.pill.pending{background:#fbeccb;color:#7a5410}.pill.refunded,.pill.cancelled{background:#eee;color:#555}
-.pill.sent{background:#dcefd8;color:#1d5a19}.pill.failed{background:#fbe0db;color:#9B2C1F}.pill.scheduled,.pill.sending{background:#fbeccb;color:#7a5410}
-dialog{border:0;padding:0;max-width:720px;width:calc(100% - 32px);background:var(--cream)}
-dialog::backdrop{background:rgba(20,30,15,.5)}
-.dlg{padding:24px}
-.dlg h3{font-family:'Oswald',sans-serif;color:var(--green);margin:0 0 12px;font-size:22px}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;font-size:14px;margin-bottom:16px}
-.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-word}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-.hint{font-size:13px;color:var(--muted)}
-textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--forest);color:var(--cream);padding:12px 20px;display:none;z-index:9}
+:root{--forest:#1E3A1B;--green:#23571F;--green-d:#163A13;--gold:#E9D08A;--cream:#FBF5E3;--cream2:#FBF7EA;--line:#ECE2C4;--ink:#2B2A24;--muted:#7a7458;--sub:#6b6650;--err:#9B2C1F;--side:248px}
+*{box-sizing:border-box}
+body{margin:0;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:var(--cream);font-size:14px;line-height:1.5}
+a{color:var(--green)}
+button{font:inherit;cursor:pointer}
 .hidden{display:none!important}
+svg{flex:none}
+
+/* Sidebar */
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);background:var(--forest);color:#cfd8c9;display:flex;flex-direction:column;padding:22px 14px;z-index:5}
+.brand{font:600 12px Oswald,sans-serif;letter-spacing:.3em;color:var(--gold);padding:4px 10px 26px;text-decoration:none}
+.brand b{display:block;font:400 22px Anton,sans-serif;letter-spacing:.02em;color:#fff;margin-top:6px}
+.nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;color:#cfd8c9;text-decoration:none;margin-bottom:2px;font-size:14px}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(233,208,138,.14);color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.nav .count{margin-left:auto;background:var(--gold);color:var(--forest);font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px}
+.sep{font:500 11px Oswald,sans-serif;letter-spacing:.2em;color:#7f9478;padding:18px 12px 8px}
+.me{margin-top:auto;display:flex;gap:10px;align-items:center;padding:12px;border-top:1px solid rgba(255,255,255,.1)}
+.av{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--forest);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.me b{display:block;color:#fff;font-size:13px;font-weight:500}
+.me>div:nth-child(2){min-width:0;flex:1}
+.me small{display:block;color:#9fb098;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me button{margin-left:auto;background:none;border:0;color:#9fb098;padding:6px}
+.me button:hover{color:var(--gold)}
+main{margin-left:var(--side);padding:30px 36px 60px;min-height:100vh}
+
+/* Mobile */
+.mtop,.tabbar,.more{display:none}
+@media(max-width:820px){
+  .side{display:none}
+  main{margin:0;padding:84px 16px 100px}
+  .mtop{display:flex;position:fixed;top:0;left:0;right:0;height:60px;background:var(--forest);align-items:center;justify-content:space-between;padding:0 16px;color:var(--gold);font:600 12px Oswald,sans-serif;letter-spacing:.28em;z-index:5}
+  .tabbar{display:grid;position:fixed;bottom:0;left:0;right:0;background:var(--forest);grid-template-columns:repeat(5,1fr);padding:8px 0 calc(10px + env(safe-area-inset-bottom));z-index:5}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9fb098;font-size:10px;text-decoration:none}
+  .tabbar a.on{color:var(--gold)}
+  .more.open{display:block;position:fixed;left:0;right:0;bottom:72px;background:var(--forest);padding:8px 16px 12px;z-index:5;border-top:1px solid rgba(255,255,255,.1)}
+  .more a{display:flex;gap:12px;align-items:center;color:#cfd8c9;padding:13px 6px;text-decoration:none}
+}
+
+/* Page */
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.crumb{font:500 12px Oswald,sans-serif;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+h1{font-family:Anton,sans-serif;font-weight:400;text-transform:uppercase;font-size:34px;margin:2px 0 0;color:var(--green);letter-spacing:.01em;line-height:1.1}
+h2{font:600 18px Oswald,sans-serif;color:var(--green);margin:28px 0 10px;letter-spacing:.02em}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;gap:8px;align-items:center;justify-content:center;font:500 13px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase;background:var(--green);color:var(--cream);border:1px solid var(--green);padding:10px 16px;text-decoration:none}
+.btn:hover{background:var(--green-d)}
+.btn.ghost{background:#fff;color:var(--green)}
+.btn.ghost:hover{background:#F4F8F1}
+.btn.danger{background:#fff;color:var(--err);border-color:var(--err)}
+.btn[disabled]{opacity:.55;cursor:wait}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat span{font-size:12px;color:var(--muted)}
+.stat b{font:400 30px Anton,sans-serif;color:var(--forest);font-variant-numeric:tabular-nums}
+.stat em{font-style:normal;font-size:12px;color:var(--muted)}
+.stat em.up{color:#2f7a2a}.stat em.warn{color:#9a6a12}
+@media(max-width:820px){.stats{grid-template-columns:1fr 1fr}h1{font-size:28px}}
+.panel{background:#fff;border:1px solid var(--line)}
+.panel.pad{padding:22px}
+.tools{display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.search{display:flex;gap:8px;align-items:center;border:1px solid #d9cea8;padding:0 12px;min-width:280px;color:#8d876b;background:#fffdf6;flex:0 1 340px}
+.search input{border:0;background:none;outline:0;padding:9px 0;font:inherit;width:100%;color:var(--ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:6px 12px;border:1px solid var(--line);font-size:12px;border-radius:99px;background:#fff;color:var(--ink)}
+.chip.on{background:var(--forest);color:var(--gold);border-color:var(--forest)}
+@media(max-width:820px){.search{min-width:0;flex:1 1 100%}}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 14px;background:var(--cream2);font-weight:600;white-space:nowrap}
+td{padding:11px 14px;border-top:1px solid #F3ECD6;vertical-align:middle}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:#FFFBEF}
+.mut{color:var(--sub)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.who{display:flex;gap:10px;align-items:center;font-weight:500}
+.who i{font-style:normal;width:30px;height:30px;border-radius:50%;background:#E9F0E4;color:var(--green);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.who small{display:none;font-weight:400;color:var(--sub);font-size:12px}
+@media(max-width:820px){.hm{display:none}.who small{display:block}td,th{padding:10px}}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.paid,.pill.sent,.pill.succeeded{background:#DCEFD8;color:#1d5a19}
+.pill.pending,.pill.scheduled,.pill.sending,.pill.partially_refunded{background:#FBECCB;color:#7a5410}
+.pill.refunded,.pill.cancelled{background:#eee;color:#555}
+.pill.failed{background:#FBE0DB;color:var(--err)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.feed{list-style:none;margin:0;padding:0}
+.feed li{display:flex;gap:12px;align-items:center;padding:12px 18px;border-top:1px solid #F3ECD6}
+.feed li:first-child{border-top:0}
+.feed .t{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+.bar{height:10px;background:#F1EAD2;margin:14px 0 6px;display:flex;overflow:hidden}
+.bar span{display:block;height:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+
+/* Forms */
+label{display:block;font-weight:500;font-size:13px;margin-bottom:6px}
+input,select,textarea{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid #cfc4a0;background:#fffdf6;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green);outline-offset:1px}
+.field{margin-bottom:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.row2{grid-template-columns:1fr}}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:400}
+.check input{width:auto}
+
+/* Dialog + toast */
+dialog{border:0;padding:0;max-width:720px;width:calc(100% - 32px);background:var(--cream);max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(20,30,15,.55)}
+.dlg{padding:24px}
+.dlg h3{font:600 22px Oswald,sans-serif;color:var(--green);margin:0 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:14px;margin:0 0 18px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-word}
+@media(max-width:600px){.kv{grid-template-columns:1fr}.kv dd{margin-bottom:6px}}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--forest);color:var(--cream);padding:12px 20px;display:none;z-index:20;max-width:calc(100% - 32px)}
+@media(max-width:820px){#toast{bottom:90px}}
+
+/* Login */
+.auth{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+.auth .art{background:var(--forest);color:var(--gold);padding:48px;display:flex;flex-direction:column;justify-content:space-between}
+.auth .art b{font:400 clamp(40px,5vw,64px)/1 Anton,sans-serif;color:#fff;text-transform:uppercase}
+.auth .art b span{color:var(--gold)}
+.auth form{align-self:center;justify-self:center;width:min(420px,100% - 32px);padding:32px 0}
+.err{color:var(--err);background:#FBE9E5;padding:10px 12px;margin-bottom:14px;display:none}
+@media(max-width:820px){.auth{grid-template-columns:1fr}.auth .art{padding:28px 20px;gap:30px}}
 </style>
 </head>
 <body>
-<header class="bar"><div><a href="https://thearimatheaacademy.com/landing/">THE ARIMATHEA ACADEMY · ADMIN</a><span id="who" style="color:var(--cream);font-size:13px"></span></div></header>
 
-<!-- Login -->
-<main id="login" class="wrap hidden">
-  <div class="eyebrow">KINGDOM SCHOOL</div><h1>Admin sign in</h1>
-  <form id="loginForm" class="card">
-    <div class="error" id="loginErr"></div>
+<!-- ── Login ─────────────────────────────────── -->
+<section id="login" class="auth hidden">
+  <div class="art">
+    <div style="font:600 12px Oswald,sans-serif;letter-spacing:.3em">THE ARIMATHEA ACADEMY</div>
+    <b>Admin<br><span>Dashboard</span></b>
+    <div style="color:#9fb098;font-size:13px">Registrations, payments and emails for every programme.</div>
+  </div>
+  <form id="loginForm">
+    <h1 style="margin-bottom:18px">Sign in</h1>
+    <div class="err" id="loginErr"></div>
     <div class="field"><label for="le">Email</label><input id="le" type="email" autocomplete="username" required></div>
     <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>
-    <button class="btn full">SIGN IN</button>
-    <div style="text-align:center;margin:16px 0 8px" class="hint">or</div>
-    <button type="button" class="sbtn" id="google" style="width:100%;padding:14px">Continue with Google</button>
+    <button class="btn" style="width:100%;padding:14px">Sign in</button>
+    <button type="button" class="btn ghost" id="google" style="width:100%;padding:14px;margin-top:10px">Continue with Google</button>
     <p class="hint" style="margin-top:16px"><a href="#" id="forgot">Forgot password?</a></p>
   </form>
-</main>
+</section>
 
-<main id="denied" class="wrap hidden"><h1>No access</h1><p>This account is not an administrator. Ask an existing admin to grant you access.</p><button class="sbtn" data-signout>Sign out</button></main>
+<section id="denied" class="auth hidden">
+  <div class="art"><div style="font:600 12px Oswald,sans-serif;letter-spacing:.3em">THE ARIMATHEA ACADEMY</div><b>No<br><span>access</span></b><div></div></div>
+  <form><h1>Not an admin</h1><p>This account doesn't have admin access. Ask an existing admin to grant it.</p><button type="button" class="btn ghost" data-signout>Sign out</button></form>
+</section>
 
-<!-- App -->
-<main id="app" class="wide hidden">
-  <nav class="tabs">
-    <button data-tab="people" class="on">REGISTRANTS</button>
-    <button data-tab="emails">EMAILS</button>
-    <button data-tab="sequences">AUTOMATIONS</button>
-    <button data-tab="settings">SETTINGS</button>
-  </nav>
+<!-- ── App shell ─────────────────────────────── -->
+<div id="app" class="hidden">
+  <aside class="side">
+    <a class="brand" href="#overview">THE ARIMATHEA ACADEMY<b>Admin</b></a>
+    <nav class="nav" id="nav"></nav>
+    <div class="me"><div class="av" id="meAv"></div><div><b id="meName">Admin</b><small id="meEmail"></small></div>
+      <button data-signout title="Sign out" aria-label="Sign out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></div>
+  </aside>
+  <div class="mtop">THE ARIMATHEA ACADEMY <div class="av" id="meAv2" style="width:30px;height:30px;font-size:11px"></div></div>
+  <nav class="tabbar" id="tabbar"></nav>
+  <div class="more" id="more"></div>
 
-  <section data-panel="people">
-    <div class="stats" id="stats"></div>
-    <div class="tools">
-      <input id="q" type="search" placeholder="Search name, email, phone…">
-      <select id="fs"><option value="">All statuses</option><option value="paid">Paid</option><option value="pending">Not paid</option><option value="refunded">Refunded</option><option value="cancelled">Cancelled</option></select>
-      <button class="sbtn" id="csv">Export CSV</button>
-      <button class="sbtn" id="emailFiltered">Email these people</button>
-      <button class="sbtn" id="reload">Refresh</button>
-    </div>
-    <div class="tbl"><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Registered</th><th>Paid</th><th>Phone</th><th>Country</th></tr></thead><tbody id="rows"></tbody></table></div>
-  </section>
-
-  <section data-panel="emails" class="hidden">
-    <div class="card" style="margin-bottom:24px">
-      <h2 style="margin-top:0">New email</h2>
-      <form id="campForm">
-        <div class="grid">
-          <div class="field"><label>Send to</label><select name="audience"><option value="paid">Paid registrants</option><option value="pending">Not yet paid</option><option value="all">Everyone registered</option></select></div>
-          <div class="field"><label>When</label><input name="when" type="datetime-local"><div class="hint">Leave empty to send now (within ~5 minutes). Your local time.</div></div>
+  <main>
+    <!-- Overview -->
+    <section data-page="overview">
+      <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Overview</h1></div>
+        <div class="acts"><a class="btn ghost" href="https://thearimatheaacademy.com/landing/" target="_blank">View sales page</a></div></div>
+      <div class="stats" id="ovStats"></div>
+      <div class="grid2">
+        <div class="panel pad">
+          <div class="crumb">Payment status</div>
+          <div class="bar" id="ovBar"></div>
+          <div class="legend" id="ovLegend"></div>
+          <h2 style="margin-top:22px">Next scheduled emails</h2>
+          <ul class="feed" id="ovNext" style="margin:0 -22px -22px"></ul>
         </div>
-        <div class="field"><label>Subject</label><input name="subject" required maxlength="200"></div>
-        <div class="field"><label>Message (HTML allowed)</label><textarea name="html" rows="9" class="code" required></textarea>
-          <div class="hint">Merge tags: {{first_name}} {{last_name}} {{zoom_link}} {{zoom_passcode_line}} {{start_date}} {{session_time}} {{payment_link}}</div></div>
-        <div class="row"><button class="sbtn p">Schedule email</button><button type="button" class="sbtn" id="runNow">Process queue now</button></div>
-      </form>
-    </div>
-    <h2>Scheduled &amp; sent broadcasts</h2>
-    <div class="tbl"><table><thead><tr><th>Subject</th><th>Audience</th><th>Scheduled for</th><th>Status</th><th>Sent</th><th></th></tr></thead><tbody id="camps"></tbody></table></div>
-    <h2>Email log (latest 200)</h2>
-    <div class="tbl"><table><thead><tr><th>When</th><th>To</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody id="log"></tbody></table></div>
-  </section>
+        <div class="panel"><div class="tools"><b style="font:600 16px Oswald,sans-serif;color:var(--green)">Latest registrations</b><a href="#registrants">View all →</a></div><ul class="feed" id="ovLatest"></ul></div>
+      </div>
+    </section>
 
-  <section data-panel="sequences" class="hidden">
-    <p class="hint">Automated emails. Steps with a delay fire that many hours after payment (paid) or registration (not paid). Steps with a fixed date go to everyone in the audience at that time.</p>
-    <div class="tbl"><table><thead><tr><th>Name</th><th>Audience</th><th>Timing</th><th>Subject</th><th>Active</th></tr></thead><tbody id="steps"></tbody></table></div>
-    <div class="row"><button class="sbtn p" id="newStep">Add automation step</button></div>
-  </section>
+    <!-- Registrants -->
+    <section data-page="registrants" class="hidden">
+      <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Registrants</h1></div>
+        <div class="acts"><button class="btn ghost hm" id="csv">Export CSV</button><button class="btn" id="emailFiltered">Email this list</button></div></div>
+      <div class="stats" id="rgStats"></div>
+      <div class="panel">
+        <div class="tools">
+          <label class="search" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg><input id="q" type="search" placeholder="Search name, email, phone…" aria-label="Search"></label>
+          <div class="chips" id="chips"></div>
+        </div>
+        <div class="tbl"><table><thead><tr><th>Name</th><th class="hm">Email</th><th class="hm">Phone</th><th>Status</th><th class="hm">Registered</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+    </section>
 
-  <section data-panel="settings" class="hidden">
-    <form id="setForm" class="card" style="max-width:720px"></form>
-  </section>
-</main>
+    <!-- Payments -->
+    <section data-page="payments" class="hidden">
+      <div class="head"><div><div class="crumb">Live from Stripe</div><h1>Payments</h1></div>
+        <div class="acts"><button class="btn ghost" id="sync">Sync with Stripe</button><a class="btn ghost hm" href="https://dashboard.stripe.com/payments" target="_blank">Open Stripe</a></div></div>
+      <div class="stats" id="pyStats"></div>
+      <div class="panel">
+        <div class="tbl"><table><thead><tr><th>Customer</th><th class="num">Amount</th><th>Status</th><th class="hm">Method</th><th class="hm">Date</th><th></th></tr></thead><tbody id="pays"></tbody></table></div>
+        <div style="padding:14px;text-align:center" id="payMore"></div>
+      </div>
+      <p class="hint" style="margin-top:12px">"Sync with Stripe" re-checks unpaid registrants against Stripe in case a payment notification was missed.</p>
+    </section>
+
+    <!-- Emails -->
+    <section data-page="emails" class="hidden">
+      <div class="head"><div><div class="crumb">Communication</div><h1>Emails</h1></div>
+        <div class="acts"><button class="btn ghost" id="runNow">Process queue now</button><button class="btn" id="newCamp">New email</button></div></div>
+      <h2 style="margin-top:0">Broadcasts</h2>
+      <div class="panel"><div class="tbl"><table><thead><tr><th>Subject</th><th class="hm">Audience</th><th>Scheduled for</th><th>Status</th><th class="num">Sent</th><th></th></tr></thead><tbody id="camps"></tbody></table></div></div>
+      <h2>Email log</h2>
+      <div class="panel"><div class="tbl"><table><thead><tr><th class="hm">When</th><th>To</th><th class="hm">Subject</th><th class="hm">Type</th><th>Status</th></tr></thead><tbody id="log"></tbody></table></div></div>
+    </section>
+
+    <!-- Automations -->
+    <section data-page="automations" class="hidden">
+      <div class="head"><div><div class="crumb">Communication</div><h1>Automations</h1></div><div class="acts"><button class="btn" id="newStep">Add step</button></div></div>
+      <p class="mut" style="margin-top:-8px">Delay steps send a set number of hours after payment (paid) or registration (not paid). Fixed-date steps go to everyone in the audience at that time.</p>
+      <div class="panel"><div class="tbl"><table><thead><tr><th>Name</th><th class="hm">Audience</th><th>Timing</th><th class="hm">Subject</th><th>Active</th></tr></thead><tbody id="steps"></tbody></table></div></div>
+    </section>
+
+    <!-- Settings -->
+    <section data-page="settings" class="hidden">
+      <div class="head"><div><div class="crumb">Kingdom School</div><h1>Settings</h1></div></div>
+      <form id="setForm" class="panel pad" style="max-width:720px"></form>
+    </section>
+  </main>
+</div>
 
 <dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
-<div id="toast"></div>
+<div id="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const fmt = (d) => (d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '');
-const gbp = (p) => '£' + (p / 100).toLocaleString('en-GB', { minimumFractionDigits: 0 });
-const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3500); };
+const fmt = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '');
+const ago = (d) => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 60 ? `${Math.max(m, 1)}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : day(d); };
+const gbp = (p) => '£' + (p / 100).toLocaleString('en-GB', { maximumFractionDigits: 2 });
+const initials = (a, b) => ((a || '?')[0] + ((b || '')[0] || '')).toUpperCase();
+const statusLabel = { pending: 'Not paid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled', succeeded: 'Paid', partially_refunded: 'Part refunded', failed: 'Failed', sent: 'Sent', scheduled: 'Scheduled', sending: 'Sending' };
+const pill = (s) => `<span class="pill ${esc(s)}">${esc(statusLabel[s] || s)}</span>`;
+const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3800); };
 const show = (id) => ['login', 'denied', 'app'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
+const stat = (label, value, note = '', cls = '') => `<div class="stat"><span>${label}</span><b>${value}</b><em class="${cls}">${note}</em></div>`;
 
-let sb, people = [], steps = [];
+const I = {
+  overview: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  registrants: '<circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-6 8-6s8 2 8 6"/><path d="M17 11a3 3 0 1 0 0-6M23 21c0-3-2-5-5-5.5"/>',
+  payments: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  emails: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/>',
+  automations: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+};
+const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['settings', 'Settings', 'PROGRAMME']];
 
+// Navigation: sidebar on desktop, bottom tab bar (+ More sheet) on phones.
+$('#nav').innerHTML = PAGES.map(([k, l, sep]) => `${sep ? `<div class="sep">${sep}</div>` : ''}<a href="#${k}" data-nav="${k}">${icon(k)}${l}${k === 'registrants' ? '<span class="count" id="navCount"></span>' : ''}</a>`).join('');
+$('#tabbar').innerHTML = PAGES.slice(0, 4).map(([k, l]) => `<a href="#${k}" data-nav="${k}">${icon(k, 22)}${l}</a>`).join('') + `<a href="#" id="moreBtn" data-nav="more">${icon('more', 22)}More</a>`;
+$('#more').innerHTML = PAGES.slice(4).map(([k, l]) => `<a href="#${k}">${icon(k)}${l}</a>`).join('') + `<a href="#" data-signout>Sign out</a>`;
+$('#moreBtn').onclick = (e) => { e.preventDefault(); $('#more').classList.toggle('open'); };
+
+const loaders = {};
+function go() {
+  const page = (location.hash.slice(1).split('?')[0] || 'overview');
+  const p = PAGES.some(([k]) => k === page) ? page : 'overview';
+  $$('[data-page]').forEach((s) => s.classList.toggle('hidden', s.dataset.page !== p));
+  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === p || (a.dataset.nav === 'more' && ['automations', 'settings'].includes(p))));
+  $('#more').classList.remove('open');
+  window.scrollTo(0, 0);
+  loaders[p]?.();
+}
+window.addEventListener('hashchange', () => { if (!location.hash.includes('access_token')) go(); });
+
+// ── Auth ──
+let sb, people = [];
 (async function init() {
   const cfg = await fetch('/landing/api/config').then((r) => r.json());
   sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
-  sb.auth.onAuthStateChange((_e, session) => route(session));
+  sb.auth.onAuthStateChange((evt, session) => {
+    if (evt === 'PASSWORD_RECOVERY') return setTimeout(changePassword, 300);
+    route(session);
+  });
   route((await sb.auth.getSession()).data.session);
 })();
 
 let routed = null;
 async function route(session) {
-  if (!session) { routed = null; $('#who').textContent = ''; return show('login'); }
+  if (!session) { routed = null; return show('login'); }
   if (routed === session.user.id) return;
   routed = session.user.id;
-  $('#who').innerHTML = esc(session.user.email) + ' · <a href="#" data-signout style="color:var(--gold);letter-spacing:0;font-size:13px;font-family:Poppins">Sign out</a>';
   const { data } = await sb.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
   if (!data) return show('denied');
+  const email = session.user.email || '';
+  const name = session.user.user_metadata?.name || session.user.user_metadata?.full_name || email.split('@')[0];
+  $('#meName').textContent = name; $('#meEmail').textContent = email;
+  $('#meAv').textContent = $('#meAv2').textContent = initials(...name.split(/[\s.]+/));
   show('app');
-  loadPeople();
+  if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
+  await loadPeople();
+  go();
 }
-
-document.addEventListener('click', (e) => { if (e.target.matches('[data-signout]')) { e.preventDefault(); sb.auth.signOut(); } });
-
+document.addEventListener('click', (e) => { if (e.target.closest('[data-signout]')) { e.preventDefault(); sb.auth.signOut(); } });
 $('#loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const { error } = await sb.auth.signInWithPassword({ email: $('#le').value, password: $('#lp').value });
@@ -160,163 +333,245 @@ $('#forgot').onclick = async (e) => {
   e.preventDefault();
   const email = $('#le').value || prompt('Your admin email');
   if (!email) return;
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/#reset' });
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' });
   toast('If that account exists, a reset link has been sent.');
 };
-sbReady();
-function sbReady() {
-  // After clicking a password-reset link, let the admin choose a new password.
-  if (location.hash.includes('type=recovery') || location.hash === '#reset') {
-    setTimeout(async () => {
-      const pw = prompt('Choose a new password (min 8 characters)');
-      if (pw && pw.length >= 8) { const { error } = await sb.auth.updateUser({ password: pw }); toast(error ? error.message : 'Password updated'); }
-    }, 1200);
-  }
+async function changePassword() {
+  const pw = prompt('Choose a new password (at least 8 characters)');
+  if (!pw) return;
+  if (pw.length < 8) return toast('Password must be at least 8 characters');
+  const { error } = await sb.auth.updateUser({ password: pw });
+  toast(error ? error.message : 'Password updated');
 }
-
-// Tabs
-$$('.tabs button').forEach((b) => (b.onclick = () => {
-  $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  $$('[data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== b.dataset.tab));
-  ({ people: loadPeople, emails: loadEmails, sequences: loadSteps, settings: loadSettings })[b.dataset.tab]();
-}));
 
 async function api(path, body) {
   const { data } = await sb.auth.getSession();
   const res = await fetch('/landing/api/admin/' + path, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + data.session.access_token }, body: JSON.stringify(body || {}) });
-  const out = await res.json();
+  const out = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(out.error || 'Request failed');
   return out;
 }
+const busy = async (btn, label, fn) => { const t = btn.textContent; btn.disabled = true; btn.textContent = label; try { await fn(); } catch (x) { toast(x.message); } finally { btn.disabled = false; btn.textContent = t; } };
 
-// ── Registrants ──
+// ── Data ──
 async function loadPeople() {
   const { data, error } = await sb.from('registrants').select('*').order('created_at', { ascending: false });
   if (error) return toast(error.message);
   people = data;
-  const paid = people.filter((p) => p.status === 'paid');
-  const stat = (n, l) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`;
-  $('#stats').innerHTML = stat(people.length, 'Registered') + stat(paid.length, 'Paid') + stat(people.filter((p) => p.status === 'pending').length, 'Not paid yet') + stat(gbp(paid.reduce((s, p) => s + (p.amount_paid || 0), 0)), 'Collected via Stripe');
-  renderPeople();
+  $('#navCount').textContent = people.length || '';
 }
+const counts = () => {
+  const c = { all: people.length, paid: 0, pending: 0, refunded: 0, cancelled: 0 };
+  people.forEach((p) => c[p.status]++);
+  return c;
+};
+const revenue = () => people.filter((p) => p.status === 'paid').reduce((s, p) => s + (p.amount_paid || 0), 0);
+const weekAgo = () => Date.now() - 7 * 864e5;
+
+// ── Overview ──
+loaders.overview = async () => {
+  await loadPeople();
+  const c = counts();
+  const conv = c.all ? Math.round((c.paid / c.all) * 100) : 0;
+  const newThisWeek = people.filter((p) => new Date(p.created_at) > weekAgo()).length;
+  $('#ovStats').innerHTML = stat('Registered', c.all, `+${newThisWeek} this week`) + stat('Paid', c.paid, `${conv}% conversion`, 'up') + stat('Not paid yet', c.pending, c.pending ? 'Reminders run automatically' : 'All caught up', c.pending ? 'warn' : '') + stat('Revenue', gbp(revenue()), 'via Stripe');
+  const seg = [['paid', '#2F7A2A', 'Paid'], ['pending', '#D9A53A', 'Not paid'], ['refunded', '#A8A397', 'Refunded'], ['cancelled', '#D8D2C0', 'Cancelled']];
+  $('#ovBar').innerHTML = c.all ? seg.map(([k, col]) => `<span style="width:${(c[k] / c.all) * 100}%;background:${col}"></span>`).join('') : '';
+  $('#ovLegend').innerHTML = seg.map(([k, col, l]) => `<span><i style="background:${col}"></i>${l} ${c[k]}</span>`).join('');
+  $('#ovLatest').innerHTML = people.slice(0, 8).map((p) => `<li class="click" data-id="${p.id}" style="cursor:pointer"><div class="who"><i>${esc(initials(p.first_name, p.last_name))}</i><span>${esc(p.first_name)} ${esc(p.last_name)}</span></div>${pill(p.status)}<span class="t">${ago(p.created_at)}</span></li>`).join('') || '<li class="empty">No registrations yet. Share the sales page to get started.</li>';
+  const now = new Date().toISOString();
+  const [{ data: camps }, { data: steps }] = await Promise.all([
+    sb.from('email_campaigns').select('subject, scheduled_for').eq('status', 'scheduled').gte('scheduled_for', now).order('scheduled_for').limit(3),
+    sb.from('email_sequence_steps').select('subject, send_at').eq('active', true).not('send_at', 'is', null).gte('send_at', now).order('send_at').limit(3),
+  ]);
+  const next = [...(camps || []).map((x) => [x.subject, x.scheduled_for]), ...(steps || []).map((x) => [x.subject, x.send_at])].filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1])).slice(0, 4);
+  $('#ovNext').innerHTML = next.map(([s, at]) => `<li>${icon('emails', 18)}<span>${esc(s)}</span><span class="t">${fmt(at)}</span></li>`).join('') || '<li class="empty">Nothing scheduled.</li>';
+};
+$('#ovLatest').onclick = (e) => { const li = e.target.closest('[data-id]'); if (li) openPerson(li.dataset.id); };
+
+// ── Registrants ──
+let filter = '';
+loaders.registrants = async () => { await loadPeople(); renderPeople(); };
 const filtered = () => {
-  const q = $('#q').value.trim().toLowerCase(), s = $('#fs').value;
-  return people.filter((p) => (!s || p.status === s) && (!q || [p.first_name, p.last_name, p.email, p.phone, p.organisation].join(' ').toLowerCase().includes(q)));
+  const q = $('#q').value.trim().toLowerCase();
+  return people.filter((p) => (!filter || p.status === filter) && (!q || [p.first_name, p.last_name, p.email, p.phone, p.organisation].join(' ').toLowerCase().includes(q)));
 };
 function renderPeople() {
+  const c = counts();
+  $('#rgStats').innerHTML = stat('Registered', c.all, `+${people.filter((p) => new Date(p.created_at) > weekAgo()).length} this week`) + stat('Paid', c.paid, '', 'up') + stat('Not paid yet', c.pending, '', 'warn') + stat('Revenue', gbp(revenue()), 'via Stripe');
+  $('#chips').innerHTML = [['', 'All', c.all], ['paid', 'Paid', c.paid], ['pending', 'Not paid', c.pending], ['refunded', 'Refunded', c.refunded], ['cancelled', 'Cancelled', c.cancelled]]
+    .filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button class="chip ${filter === k ? 'on' : ''}" data-f="${k}">${l} ${n}</button>`).join('');
   const list = filtered();
-  $('#rows').innerHTML = list.map((p) => `<tr data-id="${p.id}"><td>${esc(p.first_name)} ${esc(p.last_name)}</td><td>${esc(p.email)}</td><td><span class="pill ${p.status}">${p.status === 'pending' ? 'not paid' : p.status}</span></td><td>${fmt(p.created_at)}</td><td>${fmt(p.paid_at)}</td><td>${esc(p.phone)}</td><td>${esc(p.country)}</td></tr>`).join('') || '<tr><td colspan="7" class="hint">No registrants match.</td></tr>';
+  $('#rows').innerHTML = list.map((p) => `<tr class="click" data-id="${p.id}"><td><div class="who"><i>${esc(initials(p.first_name, p.last_name))}</i><span>${esc(p.first_name)} ${esc(p.last_name)}<small>${esc(p.email)}</small></span></div></td><td class="hm mut">${esc(p.email)}</td><td class="hm mut">${esc(p.phone)}</td><td>${pill(p.status)}</td><td class="hm mut">${day(p.created_at)}</td></tr>`).join('')
+    || `<tr><td colspan="5" class="empty">${people.length ? 'No one matches this search.' : 'No registrations yet.'}</td></tr>`;
 }
-$('#q').oninput = renderPeople; $('#fs').onchange = renderPeople; $('#reload').onclick = loadPeople;
+$('#q').oninput = renderPeople;
+$('#chips').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; renderPeople(); } };
 $('#rows').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) openPerson(tr.dataset.id); };
-
 $('#csv').onclick = () => {
   const cols = ['first_name', 'last_name', 'email', 'phone', 'country', 'organisation', 'how_heard', 'goals', 'status', 'amount_paid', 'paid_at', 'created_at', 'marketing_consent', 'notes'];
   const cell = (v) => { let s = String(v ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
   const csv = [cols.join(',')].concat(filtered().map((p) => cols.map((c) => cell(p[c])).join(','))).join('\n');
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'kingdom-school-registrants.csv' });
-  a.click();
+  Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'registrants.csv' }).click();
 };
-
-$('#emailFiltered').onclick = () => {
-  const list = filtered();
-  if (!list.length) return toast('No one in this list');
-  composeDirect(list.map((p) => p.id), `${list.length} people in the current list`);
-};
+$('#emailFiltered').onclick = () => { const l = filtered(); l.length ? composeDirect(l.map((p) => p.id), `${l.length} people in this list`) : toast('No one in this list'); };
 
 async function openPerson(id) {
   const p = people.find((x) => x.id === id);
+  if (!p) return;
   const { data: log } = await sb.from('email_log').select('*').eq('registrant_id', id).order('created_at', { ascending: false });
-  const kv = (k, v) => `<dt>${k}</dt><dd>${esc(v) || '<span class="hint">–</span>'}</dd>`;
+  const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
   $('#dlgBody').innerHTML = `
-    <h3>${esc(p.first_name)} ${esc(p.last_name)} <span class="pill ${p.status}">${p.status === 'pending' ? 'not paid' : p.status}</span></h3>
-    <dl class="kv">${kv('Email', p.email)}${kv('Phone', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${kv('Stripe', p.stripe_payment_intent)}</dl>
-    <div class="field"><label>Admin notes</label><textarea id="pNotes" rows="3">${esc(p.notes)}</textarea></div>
-    <div class="row">
-      <button class="sbtn p" id="pSave">Save notes</button>
-      ${p.status !== 'paid' ? '<button class="sbtn" id="pPaid">Mark as paid (manual)</button><button class="sbtn" id="pLink">Email payment link</button>' : ''}
-      <button class="sbtn" id="pMail">Send email</button>
-      ${p.status === 'pending' ? '<button class="sbtn d" id="pCancel">Cancel registration</button>' : ''}
-      <button class="sbtn" onclick="dlg.close()">Close</button>
+    <h3>${esc(p.first_name)} ${esc(p.last_name)} ${pill(p.status)}</h3>
+    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}</dl>
+    <div class="field"><label for="pNotes">Admin notes</label><textarea id="pNotes" rows="3">${esc(p.notes)}</textarea></div>
+    <div class="btns">
+      <button class="btn" id="pSave">Save notes</button>
+      ${p.status !== 'paid' ? '<button class="btn ghost" id="pLink">Email payment link</button><button class="btn ghost" id="pPaid">Mark paid manually</button>' : ''}
+      <button class="btn ghost" id="pMail">Send email</button>
+      ${p.status === 'paid' && p.stripe_payment_intent ? '<button class="btn danger" id="pRefund">Refund</button>' : ''}
+      ${p.status === 'pending' ? '<button class="btn danger" id="pCancel">Cancel registration</button>' : ''}
+      <button class="btn ghost" onclick="dlg.close()">Close</button>
     </div>
-    <h2 style="font-size:18px">Emails sent</h2>
-    <div class="tbl"><table><tbody>${(log || []).map((l) => `<tr><td>${fmt(l.created_at)}</td><td>${esc(l.subject)}</td><td><span class="pill ${l.status}">${l.status}</span></td></tr>`).join('') || '<tr><td class="hint">None yet</td></tr>'}</tbody></table></div>
-    <p class="hint">Refunds: issue them in the Stripe dashboard. The status updates here automatically.</p>`;
-  const upd = async (patch, msg) => { const { error } = await sb.from('registrants').update(patch).eq('id', id); toast(error ? error.message : msg); if (!error) { await loadPeople(); openPerson(id); } };
-  $('#pSave').onclick = () => upd({ notes: $('#pNotes').value }, 'Saved');
+    <h2 style="font-size:16px">Emails sent</h2>
+    <div class="panel tbl"><table><tbody>${(log || []).map((l) => `<tr><td class="mut">${fmt(l.created_at)}</td><td>${esc(l.subject)}</td><td>${pill(l.status)}</td></tr>`).join('') || '<tr><td class="empty">None yet</td></tr>'}</tbody></table></div>`;
+  const upd = async (patch, msg) => { const { error } = await sb.from('registrants').update(patch).eq('id', id); toast(error ? error.message : msg); if (!error) { await loadPeople(); go(); openPerson(id); } };
+  $('#pSave').onclick = () => upd({ notes: $('#pNotes').value }, 'Notes saved');
   if ($('#pPaid')) $('#pPaid').onclick = () => { const note = prompt('How was this paid? (e.g. bank transfer, cash)'); if (note) upd({ status: 'paid', paid_at: new Date().toISOString(), payment_method_note: 'Manual: ' + note }, 'Marked as paid. The confirmation email goes out within 5 minutes.'); };
-  if ($('#pCancel')) $('#pCancel').onclick = () => confirm('Cancel this registration? They will stop receiving reminders.') && upd({ status: 'cancelled' }, 'Cancelled');
-  if ($('#pLink')) $('#pLink').onclick = async () => {
-    try { await api('send', { registrant_ids: [id], subject: 'Complete your Kingdom School registration', html: '<p>Dear {{first_name}},</p><p>Here is your link to complete your £150 payment and secure your place on the Kingdom School of Business &amp; Ministry Bootcamp:</p><p style="margin:24px 0"><a href="{{payment_link}}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">COMPLETE PAYMENT</a></p><p>The Arimathea Academy</p>' }); toast('Payment link sent'); openPerson(id); } catch (x) { toast(x.message); }
-  };
+  if ($('#pCancel')) $('#pCancel').onclick = () => confirm('Cancel this registration? They will stop receiving reminders.') && upd({ status: 'cancelled' }, 'Registration cancelled');
+  if ($('#pLink')) $('#pLink').onclick = (e) => busy(e.target, 'Sending…', async () => {
+    await api('send', { registrant_ids: [id], subject: 'Complete your Kingdom School registration', html: '<p>Dear {{first_name}},</p><p>Here is your link to complete your £150 payment and secure your place on the Kingdom School of Business &amp; Ministry Bootcamp:</p><p style="margin:24px 0"><a href="{{payment_link}}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">COMPLETE PAYMENT</a></p><p>The Arimathea Academy</p>' });
+    toast('Payment link sent'); openPerson(id);
+  });
+  if ($('#pRefund')) $('#pRefund').onclick = () => refund(p.stripe_payment_intent, `${p.first_name} ${p.last_name}`, p.amount_paid);
   $('#pMail').onclick = () => composeDirect([id], p.email);
   dlg.open || dlg.showModal();
 }
 
+function refund(pi, who, amount) {
+  $('#dlgBody').innerHTML = `<h3>Refund ${esc(who)}</h3>
+    <p>This refunds the full ${amount ? gbp(amount) : 'payment'} to their card through Stripe and marks them as refunded. They'll stop receiving programme emails. This can't be undone.</p>
+    <div class="field"><label for="rNote">Reason (internal note)</label><input id="rNote" maxlength="200"></div>
+    <div class="btns"><button class="btn danger" id="rGo">Refund ${amount ? gbp(amount) : ''}</button><button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
+  $('#rGo').onclick = (e) => busy(e.target, 'Refunding…', async () => {
+    await api('refund', { payment_intent: pi, reason: $('#rNote').value });
+    toast('Refund issued'); dlg.close(); await loadPeople(); go();
+  });
+  dlg.open || dlg.showModal();
+}
+
 function composeDirect(ids, label) {
-  $('#dlgBody').innerHTML = `<h3>Send email now</h3><p class="hint">To: ${esc(label)}</p>
-    <div class="field"><label>Subject</label><input id="dS"></div>
-    <div class="field"><label>Message (HTML allowed, merge tags work)</label><textarea id="dH" rows="8" class="code"><p>Dear {{first_name}},</p>\n<p></p>\n<p>The Arimathea Academy</p></textarea></div>
-    <div class="row"><button class="sbtn p" id="dGo">Send now</button><button class="sbtn" onclick="dlg.close()">Cancel</button></div>`;
-  $('#dGo').onclick = async () => {
+  $('#dlgBody').innerHTML = `<h3>Send email now</h3><p class="mut">To: ${esc(label)}</p>
+    <div class="field"><label for="dS">Subject</label><input id="dS"></div>
+    <div class="field"><label for="dH">Message (HTML allowed)</label><textarea id="dH" rows="8" class="code"><p>Dear {{first_name}},</p>\n<p></p>\n<p>The Arimathea Academy</p></textarea>
+    <div class="hint">Merge tags: {{first_name}} {{last_name}} {{zoom_link}} {{zoom_passcode_line}} {{start_date}} {{session_time}} {{payment_link}}</div></div>
+    <div class="btns"><button class="btn" id="dGo">Send now</button><button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
+  $('#dGo').onclick = (e) => {
     if (!$('#dS').value.trim()) return toast('Add a subject');
-    $('#dGo').disabled = true;
-    try {
+    busy(e.target, 'Sending…', async () => {
       let sent = 0, failed = 0;
       for (let i = 0; i < ids.length; i += 100) { const r = await api('send', { registrant_ids: ids.slice(i, i + 100), subject: $('#dS').value, html: $('#dH').value }); sent += r.sent; failed += r.failed; }
       toast(`Sent ${sent}${failed ? `, ${failed} failed` : ''}`); dlg.close();
-    } catch (x) { toast(x.message); $('#dGo').disabled = false; }
+    });
   };
   dlg.open || dlg.showModal();
 }
 
+// ── Payments (live from Stripe via the Worker) ──
+let payCursor = null, payments = [];
+loaders.payments = async () => { payments = []; payCursor = null; $('#pays').innerHTML = '<tr><td colspan="6" class="empty">Loading from Stripe…</td></tr>'; await loadPayments(); };
+async function loadPayments() {
+  try {
+    const r = await api('payments', payCursor ? { starting_after: payCursor } : {});
+    payments = payments.concat(r.payments);
+    payCursor = r.has_more ? r.payments.at(-1)?.id : null;
+  } catch (x) {
+    $('#pays').innerHTML = `<tr><td colspan="6" class="empty">Couldn't load payments from Stripe: ${esc(x.message)}</td></tr>`;
+    return;
+  }
+  const ok = payments.filter((p) => p.status === 'succeeded' || p.status === 'partially_refunded');
+  const gross = payments.filter((p) => p.status !== 'failed').reduce((s, p) => s + p.amount, 0);
+  const refunded = payments.reduce((s, p) => s + p.amount_refunded, 0);
+  $('#pyStats').innerHTML = stat('Payments', ok.length, `${payments.length} loaded`) + stat('Gross', gbp(gross)) + stat('Refunded', gbp(refunded), '', refunded ? 'warn' : '') + stat('Net', gbp(gross - refunded), 'before Stripe fees', 'up');
+  $('#pays').innerHTML = payments.map((p, i) => {
+    const r = p.registrant;
+    const name = r ? `${r.first_name} ${r.last_name}` : p.name || p.email || 'Unknown';
+    return `<tr class="${r ? 'click' : ''}" data-i="${i}"><td><div class="who"><i>${esc(initials(...name.split(' ')))}</i><span>${esc(name)}<small>${esc(p.email || '')}</small></span></div></td>
+      <td class="num">${gbp(p.amount)}${p.amount_refunded && p.amount_refunded < p.amount ? `<div class="hint">${gbp(p.amount_refunded)} refunded</div>` : ''}</td>
+      <td>${pill(p.status)}</td><td class="hm mut" style="text-transform:capitalize">${esc(p.card || '')}</td><td class="hm mut">${fmt(p.created * 1000)}</td>
+      <td style="text-align:right;white-space:nowrap">${p.receipt_url ? `<a href="${esc(p.receipt_url)}" target="_blank" class="hm">Receipt</a> ` : ''}${p.status === 'succeeded' ? `<button class="btn danger" data-refund="${i}" style="padding:5px 10px;margin-left:8px">Refund</button>` : ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">No payments yet.</td></tr>';
+  $('#payMore').innerHTML = payCursor ? '<button class="btn ghost" id="payNext">Load more</button>' : '';
+  if (payCursor) $('#payNext').onclick = loadPayments;
+}
+$('#pays').onclick = (e) => {
+  const rb = e.target.closest('[data-refund]');
+  if (rb) { const p = payments[rb.dataset.refund]; return refund(p.payment_intent, p.registrant ? `${p.registrant.first_name} ${p.registrant.last_name}` : p.email, p.amount); }
+  const tr = e.target.closest('tr[data-i]');
+  const p = tr && payments[tr.dataset.i];
+  if (p?.registrant) openPerson(p.registrant.id);
+};
+$('#sync').onclick = (e) => busy(e.target, 'Syncing…', async () => {
+  const r = await api('sync');
+  toast(r.updated ? `${r.updated} payment(s) found and confirmed` : `All ${r.checked} unpaid registrations are up to date`);
+  await loadPeople(); if (r.updated) loaders.payments();
+});
+
 // ── Emails ──
-async function loadEmails() {
+loaders.emails = async () => {
   const [{ data: camps }, { data: log }] = await Promise.all([
     sb.from('email_campaigns').select('*').order('scheduled_for', { ascending: false }),
     sb.from('email_log').select('*').order('created_at', { ascending: false }).limit(200),
   ]);
   const aud = { paid: 'Paid', pending: 'Not paid', all: 'Everyone' };
-  $('#camps').innerHTML = (camps || []).map((c) => `<tr><td>${esc(c.subject)}</td><td>${aud[c.audience]}</td><td>${fmt(c.scheduled_for)}</td><td><span class="pill ${c.status}">${c.status}</span></td><td>${c.sent_count}</td><td>${c.status === 'scheduled' ? `<button class="sbtn d" data-cancel="${c.id}">Cancel</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="hint">Nothing scheduled yet.</td></tr>';
-  $('#log').innerHTML = (log || []).map((l) => `<tr><td>${fmt(l.created_at)}</td><td>${esc(l.to_email)}</td><td>${esc(l.subject)}</td><td>${l.kind}</td><td><span class="pill ${l.status}" title="${esc(l.error)}">${l.status}</span></td></tr>`).join('') || '<tr><td colspan="5" class="hint">No emails sent yet.</td></tr>';
-}
+  $('#camps').innerHTML = (camps || []).map((c) => `<tr><td>${esc(c.subject)}</td><td class="hm">${aud[c.audience]}</td><td class="mut">${fmt(c.scheduled_for)}</td><td>${pill(c.status)}</td><td class="num">${c.sent_count}</td><td style="text-align:right">${c.status === 'scheduled' ? `<button class="btn danger" data-cancel="${c.id}" style="padding:5px 10px">Cancel</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No broadcasts yet.</td></tr>';
+  $('#log').innerHTML = (log || []).map((l) => `<tr><td class="hm mut">${fmt(l.created_at)}</td><td>${esc(l.to_email)}</td><td class="hm">${esc(l.subject)}</td><td class="hm mut">${l.kind}</td><td>${pill(l.status)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No emails sent yet.</td></tr>';
+};
 $('#camps').onclick = async (e) => {
   const id = e.target.dataset.cancel; if (!id || !confirm('Cancel this scheduled email?')) return;
-  await sb.from('email_campaigns').update({ status: 'cancelled' }).eq('id', id).eq('status', 'scheduled'); loadEmails();
+  await sb.from('email_campaigns').update({ status: 'cancelled' }).eq('id', id).eq('status', 'scheduled'); loaders.emails();
 };
-$('#campForm').onsubmit = async (e) => {
-  e.preventDefault();
-  const f = Object.fromEntries(new FormData(e.target));
-  const when = f.when ? new Date(f.when) : new Date();
-  const { error } = await sb.from('email_campaigns').insert({ subject: f.subject, html: f.html, audience: f.audience, scheduled_for: when.toISOString() });
-  if (error) return toast(error.message);
-  e.target.reset(); toast(f.when ? 'Scheduled for ' + fmt(when) : 'Queued, sending within 5 minutes'); loadEmails();
+$('#runNow').onclick = (e) => busy(e.target, 'Processing…', async () => { const r = await api('run-scheduler'); toast(`Processed: ${r.sent} sent, ${r.failed} failed`); loaders.emails(); });
+$('#newCamp').onclick = () => {
+  $('#dlgBody').innerHTML = `<h3>New email</h3><form id="campForm">
+    <div class="row2"><div class="field"><label>Send to</label><select name="audience"><option value="paid">Paid registrants</option><option value="pending">Not yet paid</option><option value="all">Everyone registered</option></select></div>
+    <div class="field"><label>When</label><input name="when" type="datetime-local"><div class="hint">Leave empty to send now (within 5 minutes). Your local time.</div></div></div>
+    <div class="field"><label>Subject</label><input name="subject" required maxlength="200"></div>
+    <div class="field"><label>Message (HTML allowed)</label><textarea name="html" rows="9" class="code" required><p>Dear {{first_name}},</p>\n<p></p>\n<p>The Arimathea Academy</p></textarea>
+    <div class="hint">Merge tags: {{first_name}} {{last_name}} {{zoom_link}} {{zoom_passcode_line}} {{start_date}} {{session_time}} {{payment_link}}</div></div>
+    <div class="btns"><button class="btn">Schedule</button><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button></div></form>`;
+  $('#campForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    const when = f.when ? new Date(f.when) : new Date();
+    const { error } = await sb.from('email_campaigns').insert({ subject: f.subject, html: f.html, audience: f.audience, scheduled_for: when.toISOString() });
+    if (error) return toast(error.message);
+    dlg.close(); toast(f.when ? 'Scheduled for ' + fmt(when) : 'Queued, sending within 5 minutes'); loaders.emails();
+  };
+  dlg.showModal();
 };
-$('#runNow').onclick = async () => { try { const r = await api('run-scheduler'); toast(`Processed: ${r.sent} sent, ${r.failed} failed`); loadEmails(); } catch (x) { toast(x.message); } };
 
 // ── Automations ──
-async function loadSteps() {
+let steps = [];
+loaders.automations = async () => {
   const { data } = await sb.from('email_sequence_steps').select('*').order('sort_order');
   steps = data || [];
-  $('#steps').innerHTML = steps.map((s) => `<tr data-step="${s.id}"><td>${esc(s.name)}</td><td>${s.audience === 'paid' ? 'Paid' : 'Not paid'}</td><td>${s.send_at ? 'On ' + fmt(s.send_at) : (Number(s.delay_hours) === 0 ? 'Immediately' : s.delay_hours + 'h after ' + (s.audience === 'paid' ? 'payment' : 'registering'))}</td><td>${esc(s.subject)}</td><td>${s.active ? 'Yes' : 'No'}</td></tr>`).join('');
-}
+  $('#steps').innerHTML = steps.map((s) => `<tr class="click" data-step="${s.id}"><td>${esc(s.name)}</td><td class="hm">${s.audience === 'paid' ? 'Paid' : 'Not paid'}</td><td class="mut">${s.send_at ? fmt(s.send_at) : Number(s.delay_hours) === 0 ? 'Immediately' : `${s.delay_hours}h after ${s.audience === 'paid' ? 'payment' : 'registering'}`}</td><td class="hm">${esc(s.subject)}</td><td>${s.active ? pill('paid').replace('Paid', 'On') : '<span class="pill cancelled">Off</span>'}</td></tr>`).join('');
+};
 $('#steps').onclick = (e) => { const tr = e.target.closest('tr[data-step]'); if (tr) editStep(steps.find((s) => s.id === tr.dataset.step)); };
 $('#newStep').onclick = () => editStep({ name: '', audience: 'paid', delay_hours: 24, send_at: null, subject: '', html: '<p>Dear {{first_name}},</p>\n<p></p>', active: true, sort_order: (steps.at(-1)?.sort_order || 0) + 10 });
-
 function editStep(s) {
-  const local = s.send_at ? new Date(new Date(s.send_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+  const local = s.send_at ? new Date(new Date(s.send_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : '';
   $('#dlgBody').innerHTML = `<h3>${s.id ? 'Edit' : 'New'} automation step</h3>
     <div class="field"><label>Name</label><input id="sN" value="${esc(s.name)}"></div>
-    <div class="grid">
-      <div class="field"><label>Audience</label><select id="sA"><option value="paid">Paid registrants</option><option value="pending">Not yet paid</option></select></div>
-      <div class="field"><label>Timing</label><select id="sT"><option value="delay">Hours after payment / registration</option><option value="at">Fixed date &amp; time</option></select></div>
-    </div>
+    <div class="row2"><div class="field"><label>Audience</label><select id="sA"><option value="paid">Paid registrants</option><option value="pending">Not yet paid</option></select></div>
+    <div class="field"><label>Timing</label><select id="sT"><option value="delay">Hours after payment / registration</option><option value="at">Fixed date &amp; time</option></select></div></div>
     <div class="field" id="sDw"><label>Delay (hours)</label><input id="sD" type="number" min="0" step="0.5" value="${esc(s.delay_hours ?? 24)}"></div>
     <div class="field" id="sWw"><label>Send at (your local time)</label><input id="sW" type="datetime-local" value="${local}"></div>
     <div class="field"><label>Subject</label><input id="sS" value="${esc(s.subject)}"></div>
     <div class="field"><label>Message (HTML)</label><textarea id="sH" rows="10" class="code">${esc(s.html)}</textarea></div>
     <label class="check"><input type="checkbox" id="sOn" ${s.active ? 'checked' : ''}> Active</label>
-    <div class="row"><button class="sbtn p" id="sGo">Save</button>${s.id ? '<button class="sbtn d" id="sDel">Delete</button>' : ''}<button class="sbtn" onclick="dlg.close()">Cancel</button></div>`;
+    <div class="btns"><button class="btn" id="sGo">Save</button>${s.id ? '<button class="btn danger" id="sDel">Delete</button>' : ''}<button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
   $('#sA').value = s.audience; $('#sT').value = s.send_at ? 'at' : 'delay';
   const sync = () => { $('#sDw').classList.toggle('hidden', $('#sT').value !== 'delay'); $('#sWw').classList.toggle('hidden', $('#sT').value !== 'at'); };
   $('#sT').onchange = sync; sync();
@@ -326,18 +581,20 @@ function editStep(s) {
     const row = { name: $('#sN').value || $('#sS').value, audience: $('#sA').value, delay_hours: at ? null : Number($('#sD').value), send_at: at ? new Date($('#sW').value).toISOString() : null, subject: $('#sS').value, html: $('#sH').value, active: $('#sOn').checked, sort_order: s.sort_order };
     const { error } = s.id ? await sb.from('email_sequence_steps').update(row).eq('id', s.id) : await sb.from('email_sequence_steps').insert(row);
     if (error) return toast(error.message);
-    dlg.close(); toast('Saved'); loadSteps();
+    dlg.close(); toast('Saved'); loaders.automations();
   };
-  if ($('#sDel')) $('#sDel').onclick = async () => { if (!confirm('Delete this step?')) return; await sb.from('email_sequence_steps').delete().eq('id', s.id); dlg.close(); loadSteps(); };
-  dlg.open || dlg.showModal();
+  if ($('#sDel')) $('#sDel').onclick = async () => { if (!confirm('Delete this step?')) return; await sb.from('email_sequence_steps').delete().eq('id', s.id); dlg.close(); loaders.automations(); };
+  dlg.showModal();
 }
 
 // ── Settings ──
-const SETTING_LABELS = { zoom_link: 'Zoom meeting link (sent in confirmation email)', zoom_passcode: 'Zoom passcode', start_date: 'Start date (shown in emails)', session_time: 'Session time (shown in emails)' };
-async function loadSettings() {
+const SETTING_LABELS = { zoom_link: ['Zoom meeting link', 'Sent in the confirmation email'], zoom_passcode: ['Zoom passcode', 'Optional'], start_date: ['Start date', 'Shown in emails'], session_time: ['Session time', 'Shown in emails'] };
+loaders.settings = async () => {
   const { data } = await sb.from('settings').select('*').order('key');
-  $('#setForm').innerHTML = (data || []).map((s) => `<div class="field"><label>${esc(SETTING_LABELS[s.key] || s.key)}</label><input name="${esc(s.key)}" value="${esc(s.value)}"></div>`).join('') + '<button class="sbtn p">Save settings</button>';
-}
+  $('#setForm').innerHTML = (data || []).map((s) => { const [l, h] = SETTING_LABELS[s.key] || [s.key, '']; return `<div class="field"><label>${esc(l)}</label><input name="${esc(s.key)}" value="${esc(s.value)}"><div class="hint">${esc(h)}</div></div>`; }).join('')
+    + '<div class="btns"><button class="btn">Save settings</button><button type="button" class="btn ghost" id="pwBtn">Change my password</button></div>';
+  $('#pwBtn').onclick = changePassword;
+};
 $('#setForm').onsubmit = async (e) => {
   e.preventDefault();
   const rows = Object.entries(Object.fromEntries(new FormData(e.target))).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));

@@ -38,6 +38,18 @@ export async function createCheckoutSession(env, registrant) {
   return data;
 }
 
+export async function stripeRequest(env, method, path, params = {}) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`https://api.stripe.com${path}${method === 'GET' && qs.size ? `?${qs}` : ''}`, {
+    method,
+    headers: { authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, 'content-type': 'application/x-www-form-urlencoded' },
+    body: method === 'GET' ? undefined : qs,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Stripe: ${data.error?.message || res.status}`);
+  return data;
+}
+
 // Verifies the Stripe-Signature header (HMAC-SHA256 over "timestamp.payload").
 export async function verifyStripeSignature(payload, header, secret, toleranceSec = 300) {
   if (!header || !secret) return false;
