@@ -122,6 +122,13 @@ input:focus{outline:2px solid var(--green);outline-offset:1px}
       <button class="btn" style="width:100%;margin-top:14px">Email me a sign-in link</button>
     </form>
     <button type="button" class="btn ghost" id="google" style="width:100%;margin-top:10px">Continue with Google</button>
+    <details style="margin-top:16px"><summary style="font-size:13px;color:var(--sub);cursor:pointer">Sign in with a password instead</summary>
+      <form id="pwForm" style="margin-top:12px">
+        <label for="pe">Email</label><input id="pe" type="email" autocomplete="username" required>
+        <label for="pp" style="margin-top:10px">Password</label><input id="pp" type="password" autocomplete="current-password" required>
+        <button class="btn ghost" style="width:100%;margin-top:12px">Sign in</button>
+      </form>
+    </details>
     <p style="font-size:13px;color:var(--sub);margin-top:18px">Not registered yet? <a href="https://thearimatheaacademy.com/landing/register/">Secure your place</a>.</p>
   </div>
 </section>
@@ -193,7 +200,8 @@ async function start(session) {
   if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname + '#home');
 
   const [{ data: regs }, { data: rows }, { data: prog }, { data: details }] = await Promise.all([
-    sb.from('registrants').select('first_name, last_name, email, status, paid_at').eq('status', 'paid').limit(1),
+    // Always the signed-in person's own registration (admins can read everyone's).
+    sb.from('registrants').select('first_name, last_name, email, status, paid_at').eq('status', 'paid').eq('email', session.user.email).limit(1),
     sb.from('sessions').select('*').order('starts_at'),
     sb.from('session_progress').select('session_id'),
     sb.rpc('student_live_details'),
@@ -223,6 +231,11 @@ $('#loginForm').onsubmit = async (e) => {
   const n = $('#loginNote');
   n.className = 'note ok';
   n.textContent = `If ${$('#le').value} has a paid registration, a sign-in link is on its way. Check your inbox (and spam).`;
+};
+$('#pwForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const { error } = await sb.auth.signInWithPassword({ email: $('#pe').value, password: $('#pp').value });
+  if (error) { const n = $('#loginNote'); n.className = 'note err'; n.textContent = error.message; }
 };
 $('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
 
