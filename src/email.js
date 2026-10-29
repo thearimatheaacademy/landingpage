@@ -10,8 +10,9 @@ export async function runScheduler(env, db) {
   const [settings, steps, registrants, sent, campaigns] = await Promise.all([
     loadSettings(db),
     db.from('email_sequence_steps').select('*').eq('active', true).order('sort_order').then(unwrap),
-    db.from('registrants').select('*').in('status', ['paid', 'pending']).then(unwrap),
-    db.from('email_log').select('registrant_id, kind, ref_id').eq('status', 'sent').in('kind', ['sequence', 'campaign']).then(unwrap),
+    // Paged: a single select is capped by the database's max rows, which would silently drop records.
+    fetchAll(() => db.from('registrants').select('*').in('status', ['paid', 'pending']).order('id')),
+    fetchAll(() => db.from('email_log').select('registrant_id, kind, ref_id').eq('status', 'sent').in('kind', ['sequence', 'campaign']).order('id')),
     db.from('email_campaigns').select('*').in('status', ['scheduled', 'sending']).lte('scheduled_for', new Date(now).toISOString()).then(unwrap),
   ]);
   const done = new Set(sent.map((s) => `${s.registrant_id}:${s.kind}:${s.ref_id}`));
@@ -121,8 +122,16 @@ async function deliver(env, db, settings, queue) {
     error,
     provider_id: ids[i] || null,
   }));
+  // One duplicate row makes a batch insert fail entirely, which would leave every send in it unlogged
+  // (and re-sent next run). Fall back to row-by-row so everything that can be recorded is.
   const { error: logErr } = await db.from('email_log').insert(rows);
-  if (logErr) console.error('email_log insert', logErr);
+  if (logErr) {
+    console.error('email_log batch insert', logErr);
+    for (const row of rows) {
+      const { error } = await db.from('email_log').insert(row);
+      if (error && error.code !== '23505') console.error('email_log insert', error);
+    }
+  }
   return rows;
 }
 
@@ -148,7 +157,7 @@ function mergeVars(env, settings, r) {
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 function merge(template, vars, html) {
-  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (k in vars ? (html ? escapeHtml(vars[k]) : vars[k]) : m));
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (Object.hasOwn(vars, k) ? (html ? escapeHtml(vars[k]) : vars[k]) : m));
 }
 
 function layout(inner) {
@@ -158,6 +167,16 @@ function layout(inner) {
 <div style="background:#ffffff;padding:28px 24px">${inner}</div>
 <div style="padding:18px 24px;font-size:12px;color:#6b6858">Kingdom School of Business &amp; Ministry Bootcamp · thearimatheaacademy.com/landing</div>
 </div></body></html>`;
+}
+
+const PAGE = 1000;
+async function fetchAll(query) {
+  const rows = [];
+  for (let from = 0; ; from += PAGE) {
+    const page = await query().range(from, from + PAGE - 1).then(unwrap);
+    rows.push(...page);
+    if (page.length < PAGE) return rows;
+  }
 }
 
 function unwrap({ data, error }) {

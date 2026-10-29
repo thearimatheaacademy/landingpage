@@ -91,9 +91,12 @@ async function register(request, env, db) {
   if (existing?.status === 'paid') {
     return json({ error: 'This email is already registered and paid. Check your inbox for your confirmation and Zoom link.' }, 409);
   } else if (existing) {
-    const { data, error } = await db.from('registrants').update({ ...r, status: 'pending' }).eq('id', existing.id).select().single();
-    if (error) throw error;
-    registrant = data;
+    // Never let an unauthenticated request change an existing registration (anyone can type any email).
+    // Refunded/cancelled rows stay as they are so they can't be quietly re-activated.
+    if (existing.status !== 'pending') {
+      return json({ error: 'This email already has a registration with us. Please contact info@thearimatheaacademy.com and we will help.' }, 409);
+    }
+    registrant = existing;
   } else {
     const { data, error } = await db.from('registrants').insert(r).select().single();
     if (error) throw error;
@@ -158,7 +161,20 @@ async function claimAfterPayment(url, env, db, ctx) {
   if (Date.now() / 1000 - session.created > 48 * 3600) return Response.redirect(env.LMS_URL, 302);
   const { data: registrant } = await db.from('registrants').select('*').eq('id', session.metadata?.registrant_id || session.client_reference_id).maybeSingle();
   if (registrant?.status !== 'paid') return Response.redirect(env.LMS_URL, 302);
-  return Response.redirect(await magicLink(env, db, registrant, env.LMS_URL), 302);
+
+  // Paying proves payment, not ownership of the email typed into the form. Only sign the browser in
+  // directly when this checkout just created the account; an existing account (e.g. an admin's) gets
+  // its sign-in link by email, so only the real mailbox owner can use it.
+  const { link, created } = await magicLink(env, db, registrant, env.LMS_URL);
+  if (created) return Response.redirect(link, 302);
+  if (!(await recentlySentLogin(db, registrant.id))) await sendLoginEmail(env, db, registrant, link);
+  return Response.redirect(`${env.LMS_URL}?check-email=1`, 302);
+}
+
+async function recentlySentLogin(db, registrantId) {
+  const since = new Date(Date.now() - 60 * 1000).toISOString();
+  const { count } = await db.from('email_log').select('id', { count: 'exact', head: true }).eq('registrant_id', registrantId).eq('kind', 'login').gte('created_at', since);
+  return count > 0;
 }
 
 // Email a one-click sign-in link to a paid registrant. Always answers the same way so emails can't be probed.
@@ -166,21 +182,20 @@ async function sendLoginLink(request, env, db) {
   const { email } = await request.json().catch(() => ({}));
   const addr = clean(email, 254).toLowerCase();
   const { data: registrant } = await db.from('registrants').select('*').eq('email', addr).eq('status', 'paid').maybeSingle();
-  if (registrant) {
-    const since = new Date(Date.now() - 60 * 1000).toISOString();
-    const { count } = await db.from('email_log').select('id', { count: 'exact', head: true }).eq('registrant_id', registrant.id).eq('kind', 'login').gte('created_at', since);
-    if (!count) await sendLoginEmail(env, db, registrant, await magicLink(env, db, registrant, env.LMS_URL));
+  if (registrant && !(await recentlySentLogin(db, registrant.id))) {
+    await sendLoginEmail(env, db, registrant, (await magicLink(env, db, registrant, env.LMS_URL)).link);
   }
   return json({ ok: true });
 }
 
+// Returns a sign-in link for the registrant's email, and whether this call created the account.
 async function magicLink(env, db, registrant, redirectTo) {
-  // Create the student's account on first use (ignored if it already exists).
-  await db.auth.admin.createUser({ email: registrant.email, email_confirm: true, user_metadata: { name: `${registrant.first_name} ${registrant.last_name}` } });
+  const { data: made, error: createErr } = await db.auth.admin.createUser({ email: registrant.email, email_confirm: true, user_metadata: { name: `${registrant.first_name} ${registrant.last_name}` } });
+  const created = !createErr && !!made?.user;
   const { data, error } = await db.auth.admin.generateLink({ type: 'magiclink', email: registrant.email, options: { redirectTo } });
   if (error) throw error;
   if (data.user && registrant.user_id !== data.user.id) await db.from('registrants').update({ user_id: data.user.id }).eq('id', registrant.id);
-  return data.properties.action_link;
+  return { link: data.properties.action_link, created };
 }
 
 // Marks the session's registrant as paid. Returns the registrant only if this call changed them.

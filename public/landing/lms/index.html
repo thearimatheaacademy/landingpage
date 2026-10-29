@@ -163,6 +163,8 @@ input:focus{outline:2px solid var(--green);outline-offset:1px}
 <script>
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+// Only https links reach href attributes (blocks javascript: and other schemes in admin-entered URLs).
+const safeUrl = (u) => { try { return new URL(u).protocol === 'https:' ? u : '#'; } catch { return '#'; } };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3500); };
 const show = (id) => ['login', 'nope', 'app'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
@@ -257,6 +259,13 @@ $('#pwForm').onsubmit = async (e) => {
   const { error } = await sb.auth.signInWithPassword({ email: $('#pe').value, password: $('#pp').value });
   if (error) { const n = $('#loginNote'); n.className = 'note err'; n.textContent = error.message; }
 };
+// After checkout for an email that already had an account, the sign-in link is emailed instead.
+if (new URLSearchParams(location.search).has('check-email')) {
+  const n = $('#loginNote');
+  n.className = 'note ok';
+  n.textContent = 'Payment received, thank you! We have emailed your sign-in link to the address you registered with.';
+  history.replaceState(null, '', location.pathname);
+}
 $('#google').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
 
 const LIVE_WINDOW = 3 * 3600e3; // a session counts as "live" for 3h after it starts
@@ -284,7 +293,7 @@ function render() {
 
 function joinButton(s) {
   if (!live.zoom_link) return '<span class="tag wait">Zoom link coming soon</span>';
-  return `<a class="btn ${isLive(s) ? '' : 'gold'}" href="${esc(live.zoom_link)}" target="_blank" rel="noopener">${icon('video', 18)} Join on Zoom</a>`;
+  return `<a class="btn ${isLive(s) ? '' : 'gold'}" href="${esc(safeUrl(live.zoom_link))}" target="_blank" rel="noopener">${icon('video', 18)} Join on Zoom</a>`;
 }
 
 function home() {
@@ -330,7 +339,7 @@ function sessionPage(id) {
   const src = s.recording_url && embed(s.recording_url);
   const i = sessions.indexOf(s), prev = sessions[i - 1], next = sessions[i + 1];
   const video = src ? `<div class="video"><iframe src="${esc(src)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${esc(s.title)}"></iframe></div>`
-    : s.recording_url ? `<div class="novideo"><div><b>Recording ready</b><p>This recording opens on its own page.</p><a class="btn gold" href="${esc(s.recording_url)}" target="_blank" rel="noopener">${icon('play', 16)} Watch recording</a></div></div>`
+    : s.recording_url ? `<div class="novideo"><div><b>Recording ready</b><p>This recording opens on its own page.</p><a class="btn gold" href="${esc(safeUrl(s.recording_url))}" target="_blank" rel="noopener">${icon('play', 16)} Watch recording</a></div></div>`
     : `<div class="novideo"><div><b>${new Date(s.starts_at) > new Date() ? 'Live on ' + esc(shortDate(s.starts_at)) : 'Recording coming soon'}</b><p>${esc(longDate(s.starts_at))}</p>${new Date(s.starts_at).getTime() + LIVE_WINDOW > Date.now() ? joinButton(s) : ''}</div></div>`;
   const res = Array.isArray(s.resources) ? s.resources.filter((r) => r && r.url) : [];
   return `
@@ -343,7 +352,7 @@ function sessionPage(id) {
       ${s.recording_url ? `<button class="btn ${done.has(s.id) ? 'ghost' : ''}" id="markDone">${icon('check', 16)} ${done.has(s.id) ? 'Watched' : 'Mark as watched'}</button>` : ''}
     </div>
     ${s.description ? `<div class="panel pad" style="white-space:pre-line">${esc(s.description)}</div>` : ''}
-    ${res.length ? `<h2>Resources</h2><div class="panel pad res">${res.map((r) => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${icon('link', 18)}${esc(r.label || r.url)}</a>`).join('')}</div>` : ''}
+    ${res.length ? `<h2>Resources</h2><div class="panel pad res">${res.map((r) => `<a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener">${icon('link', 18)}${esc(r.label || r.url)}</a>`).join('')}</div>` : ''}
     <div class="row" style="justify-content:space-between;margin-top:28px">
       ${prev ? `<a class="btn ghost" href="#session/${prev.id}">← Week ${prev.week}</a>` : '<span></span>'}
       ${next ? `<a class="btn ghost" href="#session/${next.id}">Week ${next.week} →</a>` : ''}
@@ -355,7 +364,7 @@ function account() {
     <div class="panel pad" style="max-width:640px">
       <p style="margin-top:0"><strong>${esc(reg.first_name)} ${esc(reg.last_name)}</strong><br>${esc(me.email)}</p>
       <p>Place confirmed${reg.paid_at ? ' on ' + esc(new Date(reg.paid_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p>
-      ${live.zoom_link ? `<p>Live sessions: every Friday${live.session_time ? ', ' + esc(live.session_time) : ''}.<br>Zoom link: <a href="${esc(live.zoom_link)}" target="_blank" rel="noopener">${esc(live.zoom_link)}</a>${live.zoom_passcode ? '<br>Passcode: ' + esc(live.zoom_passcode) : ''}</p>` : ''}
+      ${live.zoom_link ? `<p>Live sessions: every Friday${live.session_time ? ', ' + esc(live.session_time) : ''}.<br>Zoom link: <a href="${esc(safeUrl(live.zoom_link))}" target="_blank" rel="noopener">${esc(live.zoom_link)}</a>${live.zoom_passcode ? '<br>Passcode: ' + esc(live.zoom_passcode) : ''}</p>` : ''}
       <p>Need help? Email <a href="mailto:info@thearimatheaacademy.com">info@thearimatheaacademy.com</a></p>
       <button class="btn ghost" data-signout>Sign out</button>
     </div>`;
