@@ -1,18 +1,23 @@
 # To do
 
-## Before going live (Moi)
-- [ ] **Test on the preview** (`landingpage-preview` on workers.dev, see README "Preview"), then ask Claude Code to delete the test rows.
-- [ ] **Domain to Cloudflare**: add the site in Cloudflare, switch GoDaddy nameservers, check email (MX) records came across,
-      then delete the old website's A/CNAME records for `thearimatheaacademy.com` and `www`. See README, "Domain".
-- [ ] **Stripe**: add the webhook (README lists the URL and 6 events), branding (logo, green `#23571F`), invoice
-      business details. Put the publishable key in `wrangler.jsonc` → `STRIPE_PUBLISHABLE_KEY`.
-- [ ] **Secrets** in Cloudflare (`wrangler secret put …`): `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`,
-      `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`. Then `npm run deploy` (or connect the repo in Cloudflare).
-- [ ] **Resend**: verify `kingdomschool.thearimatheaacademy.com`.
-- [ ] **Test end to end with Stripe test keys** before switching to live keys: bootcamp; retreat in full; retreat deposit
-      then balance link; dashboard invoice; recorded bank transfer; refund.
-- [ ] **Repoint tinyurl.com/thekingdomway** from the Google Form to `https://thearimatheaacademy.com/register/`.
-- [ ] Supabase Auth: turn on **leaked password protection** (security advisor warning).
+## Launch (1 Nov 2026)
+- [x] Preview Worker (`landingpage-preview`, workers.dev) tested with Stripe test keys.
+- [x] Domain moved from GoDaddy to Cloudflare; old website DNS records removed.
+- [x] Pull request merged into `main`; `landingpage` Worker builds from `main` on every push.
+- [x] Live site on `thearimatheaacademy.com`, `www`, `dashboard.` and `lms.`; email cron running again.
+
+## Still to do after launch (Moi)
+- [ ] Delete the two leftover routes on `landingpage`: `thearimatheaacademy.com/landing*` and `www.thearimatheaacademy.com/landing*` (not needed; the Worker redirects old `/landing` links itself).
+- [ ] Confirm `landingpage-preview` only has its workers.dev address (no custom domains).
+- [ ] Supabase Auth → URL configuration: Site URL `https://dashboard.thearimatheaacademy.com/`; turn on **leaked password protection**.
+- [ ] Resend: `kingdomschool.thearimatheaacademy.com` shows **Verified** (its DNS records must be in Cloudflare).
+- [ ] One real £50 retreat deposit with your own email: check the email, the dashboard, then refund it.
+- [ ] Repoint **tinyurl.com/thekingdomway** to `https://thearimatheaacademy.com/register/`.
+- [ ] Tell Claude Code which test registrations/bookings to remove (one unpaid registration was created on 1 Nov).
+
+## How changes go live from now on
+Claude Code pushes to the `website-cloudflare-checkout` branch → it builds the preview → you check it →
+merge into `main` → the live site rebuilds automatically.
 
 ## Waiting on Moi (content)
 - [ ] **Retreat balance due date** and **refund terms for retreat payments** (`[PLACEHOLDER]`s in `public/terms/`).
