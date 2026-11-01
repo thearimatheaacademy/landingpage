@@ -229,6 +229,14 @@ async function start(session) {
     sb.rpc('student_live_details'),
   ]);
   reg = regs?.[0];
+  // Admins see the portal as a student would, without needing a paid registration.
+  if (!reg) {
+    const { data: admin } = await sb.from('admins').select('user_id').eq('user_id', me.id).maybeSingle();
+    if (admin) {
+      const [first, ...rest] = (me.user_metadata?.name || me.user_metadata?.full_name || me.email.split('@')[0]).split(/\s+/);
+      reg = { first_name: first || 'Admin', last_name: rest.join(' ') || '(admin)', email: me.email, status: 'paid' };
+    }
+  }
   if (!reg) { $('#nopeEmail').textContent = me.email; return show('nope'); }
   sessions = rows || [];
   done = new Set((prog || []).map((p) => p.session_id));
