@@ -330,6 +330,7 @@ async function adminApi(api, request, env, db, ctx) {
     });
     // The charge.refunded webhook also does this; updating now keeps the dashboard instant.
     await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', payment_intent);
+    await recordRefund(db, payment_intent);
     return json({ ok: true });
   }
   if (api === '/admin/sync' && request.method === 'POST') {
