@@ -121,7 +121,12 @@ textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
 /* Dialog + toast */
 dialog{border:0;padding:0;max-width:720px;width:calc(100% - 32px);background:var(--cream);max-height:calc(100vh - 40px)}
 dialog::backdrop{background:rgba(20,30,15,.55)}
-.dlg{padding:24px}
+.dlg{padding:20px 24px 24px}
+.dlg-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--cream);border-bottom:1px solid var(--line)}
+.dlg-bar button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 12px;background:#fff;border:1px solid var(--line);color:var(--green);font:500 13px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.dlg-bar button:hover{background:#F4F8F1;border-color:var(--green)}
+.dlg-bar .x{margin-left:auto;padding:0}
+.dlg-bar button[hidden]{display:none}
 .dlg h3{font:600 22px Oswald,sans-serif;color:var(--green);margin:0 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:14px;margin:0 0 18px}
 .kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-word}
@@ -269,7 +274,13 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
   </main>
 </div>
 
-<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<dialog id="dlg" aria-label="Details">
+  <div class="dlg-bar">
+    <button type="button" id="dlgBack" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+    <button type="button" class="x" id="dlgX" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="dlg" id="dlgBody"></div>
+</dialog>
 <div id="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -319,6 +330,11 @@ function go() {
   loaders[p]?.();
 }
 window.addEventListener('hashchange', () => { if (!location.hash.includes('access_token')) go(); });
+
+// ── Pop-up frame: ✕ closes; Back returns to the previous screen when the current one has one ([data-back]). ──
+$('#dlgX').onclick = () => dlg.close();
+$('#dlgBack').onclick = () => { const t = $('#dlgBody [data-back]'); t ? t.click() : dlg.close(); };
+new MutationObserver(() => { $('#dlgBack').hidden = !$('#dlgBody [data-back]'); }).observe($('#dlgBody'), { childList: true, subtree: true });
 
 // ── Auth ──
 let sb, people = [];
@@ -572,8 +588,8 @@ async function openPerson(id) {
     await api('send', { registrant_ids: [id], subject: 'Complete your Kingdom School registration', html: '<p>Dear {{first_name}},</p><p>Here is your link to complete your £150 payment and secure your place on the Kingdom School of Business &amp; Ministry Bootcamp:</p><p style="margin:24px 0"><a href="{{payment_link}}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">COMPLETE PAYMENT</a></p><p>The Arimathea Academy</p>' });
     toast('Payment link sent'); openPerson(id);
   });
-  if ($('#pRefund')) $('#pRefund').onclick = () => refund(p.stripe_payment_intent, `${p.first_name} ${p.last_name}`, p.amount_paid);
-  $('#pMail').onclick = () => composeDirect([id], p.email);
+  if ($('#pRefund')) $('#pRefund').onclick = () => refund(p.stripe_payment_intent, `${p.first_name} ${p.last_name}`, p.amount_paid, () => openPerson(id));
+  $('#pMail').onclick = () => composeDirect([id], p.email, () => openPerson(id));
   dlg.open || dlg.showModal();
 }
 
@@ -656,7 +672,7 @@ async function openBooking(id) {
       <div class="row2"><div class="field"><label for="iAmt">Amount (£)</label><input id="iAmt" type="number" min="0.01" step="0.01" max="${owed / 100}" value="${(owed / 100).toFixed(2)}"><div class="hint">Balance owed: ${gbp(owed)}</div></div>
       <div class="field"><label for="iDays">Due in (days)</label><input id="iDays" type="number" min="1" max="60" value="7"></div></div>
       <div class="field"><label for="iDesc">Line description</label><input id="iDesc" maxlength="200" value="End of Year Retreat balance, booking ${esc(b.reference)}"></div>
-      <div class="btns"><button class="btn" id="iGo">Create and send invoice</button><button class="btn ghost" id="iBack">Back</button></div>`;
+      <div class="btns"><button class="btn" id="iGo">Create and send invoice</button><button class="btn ghost" id="iBack" data-back>Back</button></div>`;
     $('#iBack').onclick = () => openBooking(id);
     $('#iGo').onclick = (e) => busy(e.target, 'Sending…', async () => {
       const r = await api('retreat/invoice', { booking_id: id, amount: Number($('#iAmt').value), days_until_due: Number($('#iDays').value), description: $('#iDesc').value });
@@ -670,14 +686,14 @@ async function openBooking(id) {
       <div class="row2"><div class="field"><label for="mAmt">Amount (£)</label><input id="mAmt" type="number" min="0.01" step="0.01" max="${owed / 100}" value="${(owed / 100).toFixed(2)}"></div>
       <div class="field"><label for="mNote">How was it paid?</label><input id="mNote" maxlength="200" placeholder="Bank transfer"></div></div>
       <label class="check"><input type="checkbox" id="mEmail" checked> Email the booker a confirmation</label>
-      <div class="btns"><button class="btn" id="mGo">Record payment</button><button class="btn ghost" id="mBack">Back</button></div>`;
+      <div class="btns"><button class="btn" id="mGo">Record payment</button><button class="btn ghost" id="mBack" data-back>Back</button></div>`;
     $('#mBack').onclick = () => openBooking(id);
     $('#mGo').onclick = (e) => busy(e.target, 'Saving…', async () => {
       await api('retreat/manual-payment', { booking_id: id, amount: Number($('#mAmt').value), note: $('#mNote').value || 'Bank transfer', send_email: $('#mEmail').checked });
       reopen('Payment recorded');
     });
   };
-  $$('[data-refund]', $('#dlgBody')).forEach((btn) => (btn.onclick = () => refund(btn.dataset.refund, `${b.first_name} ${b.last_name} (${b.reference})`, Number(btn.dataset.amount))));
+  $$('[data-refund]', $('#dlgBody')).forEach((btn) => (btn.onclick = () => refund(btn.dataset.refund, `${b.first_name} ${b.last_name} (${b.reference})`, Number(btn.dataset.amount), () => openBooking(id))));
   dlg.open || dlg.showModal();
 }
 
@@ -686,15 +702,16 @@ function composeBooking(b) {
     <p class="mut">To: ${esc(b.email)} · booking ${esc(b.reference)}</p>
     <p class="hint">To ask them to pay, use "Email balance link" instead: it includes their personal payment button.</p>
     <a class="btn ghost" href="mailto:${esc(b.email)}?subject=${encodeURIComponent('Your End of Year Retreat booking ' + b.reference)}">Open in my email app</a>
-    <div class="btns"><button class="btn ghost" id="cBack">Back</button></div>`;
+    <div class="btns"><button class="btn ghost" id="cBack" data-back>Back</button></div>`;
   $('#cBack').onclick = () => openBooking(b.id);
 }
 
-function refund(pi, who, amount) {
+function refund(pi, who, amount, back) {
   $('#dlgBody').innerHTML = `<h3>Refund ${esc(who)}</h3>
     <p>This refunds the full ${amount ? gbp(amount) : 'payment'} to their card through Stripe and marks them as refunded. They'll stop receiving programme emails. This can't be undone.</p>
     <div class="field"><label for="rNote">Reason (internal note)</label><input id="rNote" maxlength="200"></div>
-    <div class="btns"><button class="btn danger" id="rGo">Refund ${amount ? gbp(amount) : ''}</button><button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
+    <div class="btns"><button class="btn danger" id="rGo">Refund ${amount ? gbp(amount) : ''}</button><button class="btn ghost" id="rCancel" ${back ? 'data-back' : ''}>${back ? 'Back' : 'Cancel'}</button></div>`;
+  $('#rCancel').onclick = () => (back ? back() : dlg.close());
   $('#rGo').onclick = (e) => busy(e.target, 'Refunding…', async () => {
     await api('refund', { payment_intent: pi, reason: $('#rNote').value });
     toast('Refund issued'); dlg.close(); await loadPeople(); go();
@@ -702,12 +719,13 @@ function refund(pi, who, amount) {
   dlg.open || dlg.showModal();
 }
 
-function composeDirect(ids, label) {
+function composeDirect(ids, label, back) {
   $('#dlgBody').innerHTML = `<h3>Send email now</h3><p class="mut">To: ${esc(label)}</p>
     <div class="field"><label for="dS">Subject</label><input id="dS"></div>
     <div class="field"><label for="dH">Message (HTML allowed)</label><textarea id="dH" rows="8" class="code"><p>Dear {{first_name}},</p>\n<p></p>\n<p>The Arimathea Academy</p></textarea>
     <div class="hint">Merge tags: {{first_name}} {{last_name}} {{zoom_link}} {{zoom_passcode_line}} {{start_date}} {{session_time}} {{payment_link}}</div></div>
-    <div class="btns"><button class="btn" id="dGo">Send now</button><button class="btn ghost" onclick="dlg.close()">Cancel</button></div>`;
+    <div class="btns"><button class="btn" id="dGo">Send now</button><button class="btn ghost" id="dCancel" ${back ? 'data-back' : ''}>${back ? 'Back' : 'Cancel'}</button></div>`;
+  $('#dCancel').onclick = () => (back ? back() : dlg.close());
   $('#dGo').onclick = (e) => {
     if (!$('#dS').value.trim()) return toast('Add a subject');
     busy(e.target, 'Sending…', async () => {
