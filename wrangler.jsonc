@@ -36,7 +36,7 @@
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PchCejAC6t5i16kw2Yq9MA_QDqR12LH",
     // Stripe publishable key (pk_test_… while testing, pk_live_… when live). It is public: the payment
     // step of the forms needs it to show Stripe's embedded checkout.
-    "STRIPE_PUBLISHABLE_KEY": "pk_test_REPLACE_ME"
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_51TRYWYC8Zn7VQK52NRiA2R84vP4QLczdKYqVuX76axfvoAkLBcsxMMnYASPY8yxJqvpPZcGPfsKHhO1UYStf08eZ00YLnULPCP"
   },
   // ── Preview: a separate Worker, "landingpage-preview", on its free workers.dev address. ──
   // For testing before the domain moves: `npm run preview:deploy`. No custom domains, no cron (it shares the
