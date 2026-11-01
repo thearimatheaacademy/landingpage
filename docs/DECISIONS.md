@@ -29,6 +29,7 @@ Newest last. "Moi" = the client/owner. "Claude" = recommendation made during the
 | 23 | 1 Nov | After a deposit, an **automatic balance payment link** is emailed (plus reminders at 7 and 14 days), and admins can **send a Stripe invoice** from the dashboard or record a bank transfer. While an invoice is open the link and reminders pause so nobody pays twice. | Moi. |
 | 24 | 1 Nov | Retreat data lives in new tables (`retreat_bookings`, `retreat_attendees`, `retreat_payments`), separate from bootcamp `registrants`, so retreat bookers don't get bootcamp emails or portal access. Amount paid is recalculated in the database from the payments table, and each Stripe session/invoice can only count once. | Data safety. |
 | 25 | 1 Nov | Stripe API version pinned to `2024-06-20` in the Worker. | Stops a dashboard API upgrade from silently changing request/response shapes. |
+| 26 | 1 Nov | **Preview Worker** `landingpage-preview` on workers.dev for testing before the domain moves. Shares the real database, so its cron is off, bulk email actions are blocked, and links point at its own address. Stripe test keys only. | Moi chose this testing route. |
 
 ## Where the design lives
 - Live canvas (Claude Design artifact, private to Moi): "KSBM Bootcamp Landing Page", artboards Home, Bootcamp, Retreat,

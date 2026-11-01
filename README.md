@@ -50,6 +50,39 @@ Read `CLAUDE.md` before editing. `docs/` holds decisions, content facts and the 
 
 `retreat_bookings.amount_paid` is always recalculated in the database from `retreat_payments`.
 
+## Preview: test it before the domain moves
+A second Worker, **`landingpage-preview`**, serves the same site on Cloudflare's free address
+(`https://landingpage-preview.<your-account>.workers.dev`). It is set up in `wrangler.jsonc` under `env.preview`.
+
+How it differs from the real site:
+- No custom domains. The dashboard is at `/landing/admin/` and the student portal at `/landing/lms/` on the preview address.
+- **No scheduled emails.** It uses the real database, so the automatic reminders are switched off, and so are
+  "Process queue now" and "Sync with Stripe" in its dashboard. Emails still go out for things you do yourself
+  (booking confirmations, balance links), and every link in them points back at the preview.
+- Hidden from search engines. Sender name shows "(TEST)".
+- Use **Stripe test keys** only.
+
+### One-time setup
+1. `npm install`, then `npx wrangler login` (opens Cloudflare in your browser).
+2. Stripe (in **Test mode**): Developers → API keys. Copy the **publishable key** into `wrangler.jsonc` →
+   `env.preview.vars.STRIPE_PUBLISHABLE_KEY`.
+3. `npm run preview:deploy`. The output ends with the preview address. Note it.
+4. Stripe (Test mode) → Developers → Webhooks → Add endpoint: `<preview address>/api/stripe-webhook`, with the six events
+   listed under "Stripe" below. Copy its signing secret (`whsec_…`).
+5. `npm run preview:secrets` asks for four values, one at a time: the Supabase **service role** key (Supabase →
+   Project settings → API keys), the Stripe **test** secret key (`sk_test_…`), the webhook signing secret from step 4,
+   and the Resend API key.
+6. Optional, for portal sign-in links: Supabase → Auth → URL configuration → add `<preview address>/**` to Redirect URLs.
+
+### Testing
+Open the preview address on your phone or laptop. Pay with the test card **4242 4242 4242 4242**, any future date and any CVC.
+Use **your own email** and names like "Test Booker", because these bookings are saved in the real database.
+Try: a bootcamp registration; a retreat booking in full; a retreat deposit, then the "Pay your balance" email;
+then in `/landing/admin/` → Retreat: send an invoice, record a payment, refund.
+
+When you've finished, ask Claude Code to remove the test registrations and bookings (by email address), so test people
+don't get the real reminder emails or portal access later. Redeploy the preview after changes with `npm run preview:deploy`.
+
 ## Setup and going live
 
 ### 1. Supabase (done)

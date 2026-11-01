@@ -52,3 +52,25 @@ test('dashboard and LMS keep working on their subdomains', async () => {
   await get('https://thearimatheaacademy.com/landing/img/gold-texture.jpg');
   assert.equal(served.at(-1), '/landing/img/gold-texture.jpg');
 });
+
+test('preview: dashboard and portal stay on the preview address; links point at it; no emails from cron', async () => {
+  const p = { ...env, PREVIEW: 'true', SUPABASE_SERVICE_ROLE_KEY: 'test' };
+  const host = 'https://landingpage-preview.example.workers.dev';
+  const call = (u, init) => worker.fetch(new Request(host + u, { redirect: 'manual', ...init }), p, { waitUntil() {} });
+
+  await call('/landing/admin/');
+  assert.equal(served.at(-1), '/landing/admin/');
+  await call('/landing/lms/');
+  assert.equal(served.at(-1), '/landing/lms/');
+  const home = await call('/');
+  assert.equal(home.headers.get('x-robots-tag'), 'noindex, nofollow');
+  assert.equal(served.at(-1), '/');
+  assert.equal((await call('/landing/register/')).headers.get('location'), `${host}/register/`);
+
+  // Email payment links from the preview open the preview, not the real site.
+  assert.equal((await call('/api/pay?id=x')).headers.get('location'), `${host}/register/`);
+
+  let touched = false;
+  await worker.scheduled({}, { ...p, get SUPABASE_URL() { touched = true; return 'x'; } }, { waitUntil() { touched = true; } });
+  assert.equal(touched, false);
+});

@@ -18,8 +18,11 @@ const MOVED = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const preview = isPreview(env);
+    if (preview) env = previewEnv(env, url);
     // Subdomain apps share this Worker: each one's root serves its page under /landing/.
-    const apps = [[env.DASHBOARD_URL, `${LEGACY}/admin/`], [env.LMS_URL, `${LEGACY}/lms/`]];
+    // The preview has no subdomains: the dashboard and portal stay at /landing/admin/ and /landing/lms/.
+    const apps = preview ? [] : [[env.DASHBOARD_URL, `${LEGACY}/admin/`], [env.LMS_URL, `${LEGACY}/lms/`]];
     const app = apps.find(([u]) => url.hostname === new URL(u).hostname);
     if (app) {
       // Browsers request these from the site root automatically.
@@ -42,7 +45,7 @@ export default {
         const target = MOVED[path.endsWith('/') ? path : `${path}/`];
         if (target) return Response.redirect(`${url.origin}${target}${url.search}`, 301);
       }
-      return withHeaders(await env.ASSETS.fetch(request));
+      return withHeaders(await env.ASSETS.fetch(request), preview);
     }
 
     try {
@@ -70,6 +73,8 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
+    // The preview shares the real database: it must never send the automated emails (production does that).
+    if (isPreview(env)) return;
     const db = adminClient(env);
     ctx.waitUntil(runScheduler(env, db).then((r) => console.log('scheduler', JSON.stringify(r))));
     ctx.waitUntil(runRetreatReminders(env, db).then((r) => console.log('retreat reminders', JSON.stringify(r))));
@@ -78,13 +83,21 @@ export default {
 
 // Security headers for pages served from /public (Stripe's checkout runs in its own iframe, so framing
 // our pages is never needed).
-function withHeaders(res) {
+function withHeaders(res, preview = false) {
   if (!(res.headers.get('content-type') || '').includes('text/html')) return res;
   const out = new Response(res.body, res);
   out.headers.set('x-content-type-options', 'nosniff');
   out.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
   out.headers.set('x-frame-options', 'SAMEORIGIN');
+  if (preview) out.headers.set('x-robots-tag', 'noindex, nofollow'); // keep the test copy out of Google
   return out;
+}
+
+// ── Preview (`npm run preview:deploy`): the same site on its workers.dev address, for testing before the
+// domain moves. Links in emails and Stripe return addresses point back at whatever address it is served on.
+const isPreview = (env) => env.PREVIEW === 'true';
+function previewEnv(env, url) {
+  return { ...env, SITE_URL: url.origin, DASHBOARD_URL: `${url.origin}${LEGACY}/admin/`, LMS_URL: `${url.origin}${LEGACY}/lms/` };
 }
 
 function adminClient(env) {
@@ -304,6 +317,9 @@ async function adminApi(api, request, env, db, ctx) {
 
   if (api.startsWith('/admin/retreat/') && request.method === 'POST') {
     return adminRetreat(api, request, env, db, userData.user.email, ctx);
+  }
+  if (isPreview(env) && ['/admin/run-scheduler', '/admin/sync'].includes(api)) {
+    return json({ error: 'Turned off in the preview: this would email real registrants. Use the live dashboard.' }, 403);
   }
   if (api === '/admin/run-scheduler' && request.method === 'POST') {
     const [bootcamp, retreat] = await Promise.all([runScheduler(env, db), runRetreatReminders(env, db)]);

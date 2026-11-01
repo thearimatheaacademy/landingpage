@@ -1,6 +1,7 @@
 # To do
 
 ## Before going live (Moi)
+- [ ] **Test on the preview** (`landingpage-preview` on workers.dev, see README "Preview"), then ask Claude Code to delete the test rows.
 - [ ] **Domain to Cloudflare**: add the site in Cloudflare, switch GoDaddy nameservers, check email (MX) records came across,
       then delete the old website's A/CNAME records for `thearimatheaacademy.com` and `www`. See README, "Domain".
 - [ ] **Stripe**: add the webhook (README lists the URL and 6 events), branding (logo, green `#23571F`), invoice

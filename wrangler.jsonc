@@ -37,6 +37,29 @@
     // Stripe publishable key (pk_test_… while testing, pk_live_… when live). It is public: the payment
     // step of the forms needs it to show Stripe's embedded checkout.
     "STRIPE_PUBLISHABLE_KEY": "pk_test_REPLACE_ME"
+  },
+  // ── Preview: a separate Worker, "landingpage-preview", on its free workers.dev address. ──
+  // For testing before the domain moves: `npm run preview:deploy`. No custom domains, no cron (it shares the
+  // real database, so it must never send the automated emails), and its links point at its own address.
+  // Use Stripe TEST keys here. Secrets are separate: `npx wrangler secret put NAME --env preview`.
+  "env": {
+    "preview": {
+      "routes": [],
+      "workers_dev": true,
+      "triggers": { "crons": [] },
+      "vars": {
+        "PREVIEW": "true",
+        // These three are replaced at runtime with the preview's own address.
+        "SITE_URL": "https://preview.invalid",
+        "DASHBOARD_URL": "https://preview.invalid/landing/admin/",
+        "LMS_URL": "https://preview.invalid/landing/lms/",
+        "EMAIL_FROM": "The Arimathea Academy (TEST) <hello@kingdomschool.thearimatheaacademy.com>",
+        "EMAIL_REPLY_TO": "info@thearimatheaacademy.com",
+        "SUPABASE_URL": "https://gzklxldsmhhwcolsgptk.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PchCejAC6t5i16kw2Yq9MA_QDqR12LH",
+        "STRIPE_PUBLISHABLE_KEY": "pk_test_REPLACE_ME"
+      }
+    }
   }
   // Secrets (set with `npx wrangler secret put NAME`):
   //   SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
