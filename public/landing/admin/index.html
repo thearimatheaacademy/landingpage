@@ -91,7 +91,8 @@ tbody tr.click:hover{background:#FFFBEF}
 .pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
 .pill.paid,.pill.sent,.pill.succeeded{background:#DCEFD8;color:#1d5a19}
 .pill.pending,.pill.scheduled,.pill.sending,.pill.partially_refunded{background:#FBECCB;color:#7a5410}
-.pill.refunded,.pill.cancelled{background:#eee;color:#555}
+.pill.refunded,.pill.cancelled,.pill.void{background:#eee;color:#555}
+.pill.deposit_paid,.pill.open{background:#E3ECF6;color:#1F4A72}
 .pill.failed{background:#FBE0DB;color:var(--err)}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -180,7 +181,7 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
     <!-- Overview -->
     <section data-page="overview">
       <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Overview</h1></div>
-        <div class="acts"><a class="btn ghost" href="https://thearimatheaacademy.com/landing/" target="_blank">View sales page</a></div></div>
+        <div class="acts"><a class="btn ghost" href="https://thearimatheaacademy.com/bootcamp/" target="_blank">View sales page</a></div></div>
       <div class="stats" id="ovStats"></div>
       <div class="grid2">
         <div class="panel pad">
@@ -206,6 +207,21 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
         </div>
         <div class="tbl"><table><thead><tr><th>Name</th><th class="hm">Email</th><th class="hm">Phone</th><th>Status</th><th class="hm">Registered</th></tr></thead><tbody id="rows"></tbody></table></div>
       </div>
+    </section>
+
+    <!-- Retreat bookings -->
+    <section data-page="retreat" class="hidden">
+      <div class="head"><div><div class="crumb">End of Year Retreat · 28 – 31 Dec 2026</div><h1>Retreat bookings</h1></div>
+        <div class="acts"><a class="btn ghost hm" href="https://thearimatheaacademy.com/retreat/" target="_blank">View page</a><button class="btn ghost" id="rtCsv">Export attendees CSV</button></div></div>
+      <div class="stats" id="rtStats"></div>
+      <div class="panel">
+        <div class="tools">
+          <label class="search" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg><input id="rtQ" type="search" placeholder="Search name, email, reference or attendee" aria-label="Search bookings"></label>
+          <div class="chips" id="rtChips"></div>
+        </div>
+        <div class="tbl"><table><thead><tr><th>Booked by</th><th class="hm">Reference</th><th class="num">People</th><th>Status</th><th class="num">Paid / total</th><th class="hm">Booked</th></tr></thead><tbody id="rtRows"></tbody></table></div>
+      </div>
+      <p class="hint" style="margin-top:12px">Deposit payers get the balance link straight away, then reminders 7 and 14 days after their deposit (not while an invoice is open). Open a booking to resend the link, send a Stripe invoice or record a bank transfer.</p>
     </section>
 
     <!-- Payments -->
@@ -266,7 +282,7 @@ const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric'
 const ago = (d) => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 60 ? `${Math.max(m, 1)}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : day(d); };
 const gbp = (p) => '£' + (p / 100).toLocaleString('en-GB', { maximumFractionDigits: 2 });
 const initials = (a, b) => ((a || '?')[0] + ((b || '')[0] || '')).toUpperCase();
-const statusLabel = { pending: 'Not paid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled', succeeded: 'Paid', partially_refunded: 'Part refunded', failed: 'Failed', sent: 'Sent', scheduled: 'Scheduled', sending: 'Sending' };
+const statusLabel = { deposit_paid: 'Deposit paid', open: 'Invoice open', void: 'Void', pending: 'Not paid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled', succeeded: 'Paid', partially_refunded: 'Part refunded', failed: 'Failed', sent: 'Sent', scheduled: 'Scheduled', sending: 'Sending' };
 const pill = (s) => `<span class="pill ${esc(s)}">${esc(statusLabel[s] || s)}</span>`;
 const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3800); };
 const show = (id) => ['login', 'denied', 'app'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
@@ -278,12 +294,13 @@ const I = {
   payments: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
   emails: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/>',
   automations: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  retreat: '<path d="M3 20l6-11 4 7 3-4 5 8z"/><circle cx="17" cy="6" r="2"/>',
   sessions: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z"/><path d="M8 21h8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
   more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
+const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['retreat', 'Retreat'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
 
 // Navigation: sidebar on desktop, bottom tab bar (+ More sheet) on phones.
 $('#nav').innerHTML = PAGES.map(([k, l, sep]) => `${sep ? `<div class="sep">${sep}</div>` : ''}<a href="#${k}" data-nav="${k}">${icon(k)}${l}${k === 'registrants' ? '<span class="count" id="navCount"></span>' : ''}</a>`).join('');
@@ -296,7 +313,7 @@ function go() {
   const page = (location.hash.slice(1).split('?')[0] || 'overview');
   const p = PAGES.some(([k]) => k === page) ? page : 'overview';
   $$('[data-page]').forEach((s) => s.classList.toggle('hidden', s.dataset.page !== p));
-  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === p || (a.dataset.nav === 'more' && ['automations', 'sessions', 'settings'].includes(p))));
+  $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === p || (a.dataset.nav === 'more' && PAGES.slice(4).some(([k]) => k === p))));
   $('#more').classList.remove('open');
   window.scrollTo(0, 0);
   loaders[p]?.();
@@ -558,6 +575,119 @@ async function openPerson(id) {
   if ($('#pRefund')) $('#pRefund').onclick = () => refund(p.stripe_payment_intent, `${p.first_name} ${p.last_name}`, p.amount_paid);
   $('#pMail').onclick = () => composeDirect([id], p.email);
   dlg.open || dlg.showModal();
+}
+
+// ── Retreat bookings ──
+let bookings = [], rtFilter = '';
+async function loadBookings() {
+  const { data, error } = await sb.from('retreat_bookings').select('*, retreat_attendees(*)').order('created_at', { ascending: false });
+  if (error) return toast(error.message);
+  bookings = data.map((b) => ({ ...b, people: (b.retreat_attendees || []).sort((x, y) => x.position - y.position) }));
+}
+loaders.retreat = async () => { await loadBookings(); renderBookings(); };
+const live = (b) => ['paid', 'deposit_paid'].includes(b.status);
+function renderBookings() {
+  const L = bookings.filter(live), ppl = L.flatMap((b) => b.people);
+  const owed = L.reduce((n, b) => n + b.total_amount - b.amount_paid, 0);
+  const got = bookings.reduce((n, b) => n + b.amount_paid, 0);
+  const rooms = (r) => ppl.filter((a) => a.room === r).length;
+  $('#rtStats').innerHTML = stat('Attending', ppl.length, `${L.length} booking${L.length === 1 ? '' : 's'}`) + stat('Rooms', `${rooms('double')} / ${rooms('single')}`, 'double / single')
+    + stat('Collected', gbp(got), 'deposits and payments', 'up') + stat('Balances due', gbp(owed), `${L.filter((b) => b.status === 'deposit_paid').length} on deposit`, owed ? 'warn' : '');
+  const c = { '': bookings.length }; bookings.forEach((b) => (c[b.status] = (c[b.status] || 0) + 1));
+  $('#rtChips').innerHTML = [['', 'All'], ['paid', 'Paid'], ['deposit_paid', 'Deposit paid'], ['pending', 'Not paid'], ['refunded', 'Refunded'], ['cancelled', 'Cancelled']]
+    .filter(([k]) => !k || c[k]).map(([k, l]) => `<button class="chip ${rtFilter === k ? 'on' : ''}" data-f="${k}">${l} ${c[k] || 0}</button>`).join('');
+  const q = $('#rtQ').value.trim().toLowerCase();
+  const list = bookings.filter((b) => (!rtFilter || b.status === rtFilter) && (!q || [b.reference, b.first_name, b.last_name, b.email, b.phone, ...b.people.map((a) => a.first_name + ' ' + a.last_name)].join(' ').toLowerCase().includes(q)));
+  $('#rtRows').innerHTML = list.map((b) => `<tr class="click" data-id="${b.id}"><td><div class="who"><i>${esc(initials(b.first_name, b.last_name))}</i><span>${esc(b.first_name)} ${esc(b.last_name)}<small>${esc(b.reference)} · ${esc(b.email)}</small></span></div></td><td class="hm mut">${esc(b.reference)}</td><td class="num">${b.people.length}</td><td>${pill(b.status)}${b.invoice_status === 'open' ? ' ' + pill('open') : ''}</td><td class="num">${gbp(b.amount_paid)} / ${gbp(b.total_amount)}</td><td class="hm mut">${day(b.created_at)}</td></tr>`).join('')
+    || `<tr><td colspan="6" class="empty">${bookings.length ? 'No bookings match this search.' : 'No retreat bookings yet.'}</td></tr>`;
+}
+$('#rtQ').oninput = renderBookings;
+$('#rtChips').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { rtFilter = b.dataset.f; renderBookings(); } };
+$('#rtRows').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) openBooking(tr.dataset.id); };
+$('#rtCsv').onclick = () => {
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['Reference', 'Status', 'Attendee', 'Room', 'Dietary', 'Booked by', 'Email', 'Phone', 'Paid', 'Total', 'Requests']];
+  bookings.forEach((b) => b.people.forEach((a) => rows.push([b.reference, statusLabel[b.status] || b.status, `${a.first_name} ${a.last_name}`, a.room, a.dietary, `${b.first_name} ${b.last_name}`, b.email, b.phone, (b.amount_paid / 100).toFixed(2), (b.total_amount / 100).toFixed(2), b.special_requests])));
+  const url = URL.createObjectURL(new Blob(['﻿' + rows.map((r) => r.map(cell).join(',')).join('\r\n')], { type: 'text/csv' }));
+  Object.assign(document.createElement('a'), { href: url, download: 'retreat-attendees.csv' }).click();
+  URL.revokeObjectURL(url);
+};
+
+async function openBooking(id) {
+  await loadBookings();
+  const b = bookings.find((x) => x.id === id);
+  if (!b) return;
+  const [{ data: pays }, { data: log }] = await Promise.all([
+    sb.from('retreat_payments').select('*').eq('booking_id', id).order('created_at'),
+    sb.from('email_log').select('*').eq('booking_id', id).order('created_at', { ascending: false }),
+  ]);
+  const owed = b.total_amount - b.amount_paid;
+  const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
+  const kindLabel = { deposit: 'Deposit', full: 'Paid in full', balance: 'Balance (link)', invoice: 'Invoice', manual: 'Recorded manually' };
+  $('#dlgBody').innerHTML = `
+    <h3>${esc(b.first_name)} ${esc(b.last_name)} ${pill(b.status)}${b.invoice_status ? ' ' + pill(b.invoice_status) : ''}</h3>
+    <dl class="kv">${kv('Reference', b.reference)}${kv('Email', b.email)}${kv('Phone / WhatsApp', b.phone)}${kv('Chose to pay', b.payment_option === 'deposit' ? '£50 deposit per person' : 'In full')}<dt>Paid</dt><dd><b>${gbp(b.amount_paid)}</b> of ${gbp(b.total_amount)}${owed > 0 ? ` · <b style="color:#9a6a12">${gbp(owed)} to pay</b>` : ''}</dd>${kv('Requests', b.special_requests)}${kv('Marketing', b.marketing_consent ? 'Opted in' : 'No')}${kv('Booked', fmt(b.created_at))}${b.stripe_invoice_id ? kv('Invoice', b.stripe_invoice_id) : ''}</dl>
+    <h2 style="font-size:16px;margin-top:0">Attendees</h2>
+    <div class="panel tbl"><table><thead><tr><th>Name</th><th>Room</th><th class="num">Price</th><th class="hm">Dietary</th></tr></thead><tbody>${b.people.map((a) => `<tr><td>${esc(a.first_name)} ${esc(a.last_name)}</td><td>${a.room === 'single' ? 'Single' : 'Double'}</td><td class="num">${gbp(a.unit_price)}</td><td class="hm mut">${esc(a.dietary || '')}</td></tr>`).join('')}</tbody></table></div>
+    <div class="btns">
+      ${owed > 0 && live(b) ? '<button class="btn" id="bLink">Email balance link</button>' : ''}
+      ${owed > 0 && live(b) && b.invoice_status !== 'open' ? '<button class="btn ghost" id="bInvoice">Send Stripe invoice</button>' : ''}
+      ${owed > 0 && b.status !== 'cancelled' && b.status !== 'refunded' ? '<button class="btn ghost" id="bManual">Record payment</button>' : ''}
+      ${b.stripe_session_id && b.status !== 'paid' ? '<button class="btn ghost" id="bSync">Check Stripe</button>' : ''}
+      <button class="btn ghost" id="bMail">Send email</button>
+      ${b.status === 'pending' ? '<button class="btn danger" id="bCancel">Cancel booking</button>' : ''}
+      <button class="btn ghost" onclick="dlg.close()">Close</button>
+    </div>
+    <h2 style="font-size:16px">Payments</h2>
+    <div class="panel tbl"><table><tbody>${(pays || []).map((x) => `<tr><td class="mut">${fmt(x.created_at)}</td><td>${kindLabel[x.kind] || esc(x.kind)}${x.note ? ` <span class="mut">· ${esc(x.note)}</span>` : ''}${x.recorded_by ? ` <span class="mut">· by ${esc(x.recorded_by)}</span>` : ''}</td><td class="num">${gbp(x.amount)}</td><td>${pill(x.status)}${x.status === 'succeeded' && x.stripe_payment_intent ? ` <button class="btn danger" style="padding:4px 10px" data-refund="${esc(x.stripe_payment_intent)}" data-amount="${x.amount}">Refund</button>` : ''}</td></tr>`).join('') || '<tr><td class="empty">No payments yet</td></tr>'}</tbody></table></div>
+    <div class="field" style="margin-top:18px"><label for="bNotes">Admin notes</label><textarea id="bNotes" rows="3">${esc(b.notes)}</textarea></div>
+    <div class="btns"><button class="btn" id="bSave">Save notes</button></div>
+    <h2 style="font-size:16px">Emails sent</h2>
+    <div class="panel tbl"><table><tbody>${(log || []).map((l) => `<tr><td class="mut">${fmt(l.created_at)}</td><td>${esc(l.subject)}</td><td>${pill(l.status)}</td></tr>`).join('') || '<tr><td class="empty">None yet</td></tr>'}</tbody></table></div>`;
+  const reopen = async (msg) => { if (msg) toast(msg); await openBooking(id); if (location.hash === '#retreat') renderBookings(); };
+  $('#bSave').onclick = async () => { const { error } = await sb.from('retreat_bookings').update({ notes: $('#bNotes').value }).eq('id', id); toast(error ? error.message : 'Notes saved'); };
+  if ($('#bLink')) $('#bLink').onclick = (e) => busy(e.target, 'Sending…', async () => { await api('retreat/send-link', { booking_id: id }); reopen('Balance link sent'); });
+  if ($('#bSync')) $('#bSync').onclick = (e) => busy(e.target, 'Checking…', async () => { const r = await api('retreat/sync', { booking_id: id }); reopen(r.updated ? 'Payment found and recorded' : 'No new payment found in Stripe'); });
+  if ($('#bCancel')) $('#bCancel').onclick = async () => { if (!confirm('Cancel this unpaid booking?')) return; const { error } = await sb.from('retreat_bookings').update({ status: 'cancelled' }).eq('id', id); reopen(error ? error.message : 'Booking cancelled'); };
+  $('#bMail').onclick = () => composeBooking(b);
+  if ($('#bInvoice')) $('#bInvoice').onclick = () => {
+    $('#dlgBody').innerHTML = `<h3>Send a Stripe invoice</h3>
+      <p>Stripe emails ${esc(b.email)} an invoice with a secure payment page. When it's paid, the booking updates and the confirmation email goes out automatically. While the invoice is open, the online balance link and reminders pause so they can't pay twice.</p>
+      <div class="row2"><div class="field"><label for="iAmt">Amount (£)</label><input id="iAmt" type="number" min="0.01" step="0.01" max="${owed / 100}" value="${(owed / 100).toFixed(2)}"><div class="hint">Balance owed: ${gbp(owed)}</div></div>
+      <div class="field"><label for="iDays">Due in (days)</label><input id="iDays" type="number" min="1" max="60" value="7"></div></div>
+      <div class="field"><label for="iDesc">Line description</label><input id="iDesc" maxlength="200" value="End of Year Retreat balance, booking ${esc(b.reference)}"></div>
+      <div class="btns"><button class="btn" id="iGo">Create and send invoice</button><button class="btn ghost" id="iBack">Back</button></div>`;
+    $('#iBack').onclick = () => openBooking(id);
+    $('#iGo').onclick = (e) => busy(e.target, 'Sending…', async () => {
+      const r = await api('retreat/invoice', { booking_id: id, amount: Number($('#iAmt').value), days_until_due: Number($('#iDays').value), description: $('#iDesc').value });
+      await reopen('Invoice sent');
+      if (r.hosted_invoice_url) $('#dlgBody').insertAdjacentHTML('afterbegin', `<p class="hint">Invoice link: <a href="${esc(r.hosted_invoice_url)}" target="_blank">${esc(r.invoice_id)}</a></p>`);
+    });
+  };
+  if ($('#bManual')) $('#bManual').onclick = () => {
+    $('#dlgBody').innerHTML = `<h3>Record a payment</h3>
+      <p>For money received outside Stripe, such as a bank transfer or cash.</p>
+      <div class="row2"><div class="field"><label for="mAmt">Amount (£)</label><input id="mAmt" type="number" min="0.01" step="0.01" max="${owed / 100}" value="${(owed / 100).toFixed(2)}"></div>
+      <div class="field"><label for="mNote">How was it paid?</label><input id="mNote" maxlength="200" placeholder="Bank transfer"></div></div>
+      <label class="check"><input type="checkbox" id="mEmail" checked> Email the booker a confirmation</label>
+      <div class="btns"><button class="btn" id="mGo">Record payment</button><button class="btn ghost" id="mBack">Back</button></div>`;
+    $('#mBack').onclick = () => openBooking(id);
+    $('#mGo').onclick = (e) => busy(e.target, 'Saving…', async () => {
+      await api('retreat/manual-payment', { booking_id: id, amount: Number($('#mAmt').value), note: $('#mNote').value || 'Bank transfer', send_email: $('#mEmail').checked });
+      reopen('Payment recorded');
+    });
+  };
+  $$('[data-refund]', $('#dlgBody')).forEach((btn) => (btn.onclick = () => refund(btn.dataset.refund, `${b.first_name} ${b.last_name} (${b.reference})`, Number(btn.dataset.amount))));
+  dlg.open || dlg.showModal();
+}
+
+function composeBooking(b) {
+  $('#dlgBody').innerHTML = `<h3>Email ${esc(b.first_name)} ${esc(b.last_name)}</h3>
+    <p class="mut">To: ${esc(b.email)} · booking ${esc(b.reference)}</p>
+    <p class="hint">To ask them to pay, use "Email balance link" instead: it includes their personal payment button.</p>
+    <a class="btn ghost" href="mailto:${esc(b.email)}?subject=${encodeURIComponent('Your End of Year Retreat booking ' + b.reference)}">Open in my email app</a>
+    <div class="btns"><button class="btn ghost" id="cBack">Back</button></div>`;
+  $('#cBack').onclick = () => openBooking(b.id);
 }
 
 function refund(pi, who, amount) {

@@ -84,16 +84,19 @@ export async function sendLoginEmail(env, db, registrant, link) {
   return deliver(env, db, await loadSettings(db), [{ registrant, kind: 'login', ref_id: null, subject: 'Your Kingdom School sign-in link', html }]);
 }
 
-async function deliver(env, db, settings, queue) {
+// Each queue item: { registrant | to, kind, ref_id, subject, html, booking_id?, template?, vars?, footer? }.
+// `registrant` is a bootcamp registrant; `to` is any { email, first_name, last_name } (e.g. a retreat booker).
+export async function deliver(env, db, settings, queue) {
   if (!queue.length) return [];
-  const emails = queue.map(({ registrant, subject, html }) => {
-    const vars = mergeVars(env, settings, registrant);
+  const emails = queue.map((q) => {
+    const person = q.registrant || q.to;
+    const vars = { ...mergeVars(env, settings, person, !!q.registrant), ...(q.vars || {}) };
     return {
       from: env.EMAIL_FROM,
-      to: [registrant.email],
+      to: [person.email],
       ...(env.EMAIL_REPLY_TO ? { reply_to: env.EMAIL_REPLY_TO } : {}),
-      subject: merge(subject, vars, false),
-      html: layout(merge(html, vars, true)),
+      subject: merge(q.subject, vars, false),
+      html: layout(merge(q.html, vars, true), q.footer),
     };
   });
 
@@ -113,10 +116,12 @@ async function deliver(env, db, settings, queue) {
   }
 
   const rows = queue.map((q, i) => ({
-    registrant_id: q.registrant.id,
-    to_email: q.registrant.email,
+    registrant_id: q.registrant?.id ?? null,
+    booking_id: q.booking_id ?? null,
+    template: q.template ?? null,
+    to_email: emails[i].to[0],
     kind: q.kind,
-    ref_id: q.ref_id,
+    ref_id: q.ref_id ?? null,
     subject: emails[i].subject,
     status: error ? 'failed' : 'sent',
     error,
@@ -135,12 +140,12 @@ async function deliver(env, db, settings, queue) {
   return rows;
 }
 
-async function loadSettings(db) {
+export async function loadSettings(db) {
   const rows = await db.from('settings').select('key, value').then(unwrap);
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
 
-function mergeVars(env, settings, r) {
+function mergeVars(env, settings, r, isRegistrant) {
   return {
     first_name: r.first_name,
     last_name: r.last_name,
@@ -149,23 +154,25 @@ function mergeVars(env, settings, r) {
     zoom_passcode_line: settings.zoom_passcode ? `Passcode: ${settings.zoom_passcode}` : '',
     start_date: settings.start_date || '',
     session_time: settings.session_time || '',
-    payment_link: `${env.SITE_URL}/api/pay?id=${r.id}&t=${r.pay_token}`,
+    payment_link: isRegistrant ? `${env.SITE_URL}/api/pay?id=${r.id}&t=${r.pay_token}` : '',
     lms_link: env.LMS_URL,
   };
 }
 
-const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 function merge(template, vars, html) {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (Object.hasOwn(vars, k) ? (html ? escapeHtml(vars[k]) : vars[k]) : m));
 }
 
-function layout(inner) {
+const BOOTCAMP_FOOTER = 'Kingdom School of Business &amp; Ministry Bootcamp · thearimatheaacademy.com';
+
+function layout(inner, footer = BOOTCAMP_FOOTER) {
   return `<!doctype html><html><body style="margin:0;background:#FBF5E3">
 <div style="max-width:600px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;color:#2B2A24;font-size:16px;line-height:1.6">
 <div style="background:#1E3A1B;padding:18px 24px;color:#E9D08A;letter-spacing:.3em;font-size:13px;font-weight:600">THE ARIMATHEA ACADEMY</div>
 <div style="background:#ffffff;padding:28px 24px">${inner}</div>
-<div style="padding:18px 24px;font-size:12px;color:#6b6858">Kingdom School of Business &amp; Ministry Bootcamp · thearimatheaacademy.com/landing</div>
+<div style="padding:18px 24px;font-size:12px;color:#6b6858">${footer}</div>
 </div></body></html>`;
 }
 
@@ -179,7 +186,7 @@ async function fetchAll(query) {
   }
 }
 
-function unwrap({ data, error }) {
+export function unwrap({ data, error }) {
   if (error) throw error;
   return data;
 }

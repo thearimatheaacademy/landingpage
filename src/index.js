@@ -1,44 +1,70 @@
 import { createClient } from '@supabase/supabase-js';
 import { createCheckoutSession, verifyStripeSignature, stripeRequest } from './stripe.js';
 import { runScheduler, sendToRegistrant, sendManual, sendLoginEmail } from './email.js';
+import { book, getBooking, balanceCheckout, recordSession, recordInvoice, recordRefund, runRetreatReminders, adminRetreat } from './retreat.js';
 
-const BASE = '/landing';
+// The site used to live under /landing. Admin and LMS pages (and their assets) still do, and links
+// already emailed to registrants use /landing/api/..., so those keep working alongside /api/....
+const LEGACY = '/landing';
+const MOVED = {
+  '/landing/': '/bootcamp/',
+  '/landing/register/': '/register/',
+  '/landing/success/': '/success/',
+  '/landing/cancelled/': '/cancelled/',
+  '/landing/privacy/': '/privacy/',
+  '/landing/terms/': '/terms/',
+};
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const preview = isPreview(env);
+    if (preview) env = previewEnv(env, url);
     // Subdomain apps share this Worker: each one's root serves its page under /landing/.
-    const apps = [[env.DASHBOARD_URL, `${BASE}/admin/`], [env.LMS_URL, `${BASE}/lms/`]];
+    // The preview has no subdomains: the dashboard and portal stay at /landing/admin/ and /landing/lms/.
+    const apps = preview ? [] : [[env.DASHBOARD_URL, `${LEGACY}/admin/`], [env.LMS_URL, `${LEGACY}/lms/`]];
     const app = apps.find(([u]) => url.hostname === new URL(u).hostname);
     if (app) {
       // Browsers request these from the site root automatically.
       const rootIcons = { '/favicon.ico': 'favicon.ico', '/apple-touch-icon.png': 'apple-touch-icon.png' };
-      if (rootIcons[url.pathname]) return env.ASSETS.fetch(new Request(new URL(`${BASE}/icons/${rootIcons[url.pathname]}`, url), request));
-      if (url.pathname === '/') return env.ASSETS.fetch(new Request(new URL(app[1], url), request));
-      if (!url.pathname.startsWith(`${BASE}/`)) return Response.redirect(`${url.origin}/`, 302);
+      if (rootIcons[url.pathname]) return env.ASSETS.fetch(new Request(new URL(`${LEGACY}/icons/${rootIcons[url.pathname]}`, url), request));
+      if (url.pathname === '/') return withHeaders(await env.ASSETS.fetch(new Request(new URL(app[1], url), request)));
+      if (!url.pathname.startsWith(`${LEGACY}/`)) return Response.redirect(`${url.origin}/`, 302);
     } else {
+      // www → bare domain, keeping the path.
+      if (url.hostname.startsWith('www.')) return Response.redirect(`${url.protocol}//${url.hostname.slice(4)}${url.pathname}${url.search}`, 301);
       // On the main domain, the app paths redirect to their subdomains.
       const moved = apps.find(([, path]) => url.pathname.startsWith(path.slice(0, -1)));
       if (moved) return Response.redirect(moved[0], 301);
     }
 
-    if (url.pathname === BASE) return Response.redirect(`${url.origin}${BASE}/`, 301);
-
-    const api = url.pathname.startsWith(`${BASE}/api/`) ? url.pathname.slice(`${BASE}/api`.length) : null;
-    if (api === null) return env.ASSETS.fetch(request);
+    const path = url.pathname;
+    const api = path.startsWith('/api/') ? path.slice(4) : path.startsWith(`${LEGACY}/api/`) ? path.slice(`${LEGACY}/api`.length) : null;
+    if (api === null) {
+      if (!app) {
+        const target = MOVED[path.endsWith('/') ? path : `${path}/`];
+        if (target) return Response.redirect(`${url.origin}${target}${url.search}`, 301);
+      }
+      return withHeaders(await env.ASSETS.fetch(request), preview);
+    }
 
     try {
       if (api === '/config' && request.method === 'GET') {
-        // Public values only: the admin page needs these to start Supabase Auth.
-        return json({ supabaseUrl: env.SUPABASE_URL, supabaseKey: env.SUPABASE_PUBLISHABLE_KEY });
+        // Public values only: pages need these to start Supabase Auth and Stripe's embedded checkout.
+        return json({ supabaseUrl: env.SUPABASE_URL, supabaseKey: env.SUPABASE_PUBLISHABLE_KEY, stripeKey: env.STRIPE_PUBLISHABLE_KEY });
       }
       if (api === '/stripe-webhook' && request.method === 'POST') return await stripeWebhook(request, env, ctx);
       if (api === '/register' && request.method === 'POST') return await register(request, env, adminClient(env));
+      if (api === '/checkout' && request.method === 'POST') return await resumeCheckout(request, env, adminClient(env));
       if (api === '/pay' && request.method === 'GET') return await resumePayment(url, env, adminClient(env));
+      if (api === '/retreat/book' && request.method === 'POST') return await book(request, env, adminClient(env));
+      if (api === '/retreat/booking' && request.method === 'GET') return await getBooking(url, adminClient(env));
+      if (api === '/retreat/checkout' && request.method === 'POST') return await balanceCheckout(request, env, adminClient(env));
+      if (api === '/retreat/return' && request.method === 'GET') return await retreatReturn(url, env, adminClient(env), ctx);
       if (api === '/lms/claim' && request.method === 'GET') return await claimAfterPayment(url, env, adminClient(env), ctx);
       if (api === '/lms/login' && request.method === 'POST') return await sendLoginLink(request, env, adminClient(env));
       // Admins see the real error (e.g. a Stripe refund failure); the public never does.
-      if (api.startsWith('/admin/')) return await adminApi(api, request, env, adminClient(env)).catch((e) => json({ error: e.message }, 500));
+      if (api.startsWith('/admin/')) return await adminApi(api, request, env, adminClient(env), ctx).catch((e) => json({ error: e.message }, 500));
       return json({ error: 'Not found' }, 404);
     } catch (err) {
       console.error(err);
@@ -47,9 +73,32 @@ export default {
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runScheduler(env, adminClient(env)).then((r) => console.log('scheduler', JSON.stringify(r))));
+    // The preview shares the real database: it must never send the automated emails (production does that).
+    if (isPreview(env)) return;
+    const db = adminClient(env);
+    ctx.waitUntil(runScheduler(env, db).then((r) => console.log('scheduler', JSON.stringify(r))));
+    ctx.waitUntil(runRetreatReminders(env, db).then((r) => console.log('retreat reminders', JSON.stringify(r))));
   },
 };
+
+// Security headers for pages served from /public (Stripe's checkout runs in its own iframe, so framing
+// our pages is never needed).
+function withHeaders(res, preview = false) {
+  if (!(res.headers.get('content-type') || '').includes('text/html')) return res;
+  const out = new Response(res.body, res);
+  out.headers.set('x-content-type-options', 'nosniff');
+  out.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+  out.headers.set('x-frame-options', 'SAMEORIGIN');
+  if (preview) out.headers.set('x-robots-tag', 'noindex, nofollow'); // keep the test copy out of Google
+  return out;
+}
+
+// ── Preview (`npm run preview:deploy`): the same site on its workers.dev address, for testing before the
+// domain moves. Links in emails and Stripe return addresses point back at whatever address it is served on.
+const isPreview = (env) => env.PREVIEW === 'true';
+function previewEnv(env, url) {
+  return { ...env, SITE_URL: url.origin, DASHBOARD_URL: `${url.origin}${LEGACY}/admin/`, LMS_URL: `${url.origin}${LEGACY}/lms/` };
+}
 
 function adminClient(env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -103,25 +152,53 @@ async function register(request, env, db) {
     registrant = data;
   }
 
-  const session = await createCheckoutSession(env, registrant);
-  await db.from('registrants').update({ stripe_session_id: session.id }).eq('id', registrant.id);
-  return json({ url: session.url });
+  return json(await startCheckout(env, db, registrant));
 }
 
-// Link in "complete your payment" emails: /landing/api/pay?id=…&t=…
+// Step 2 of /register/: an Embedded Checkout session for this registrant.
+async function startCheckout(env, db, registrant) {
+  const session = await createCheckoutSession(env, registrant);
+  await db.from('registrants').update({ stripe_session_id: session.id }).eq('id', registrant.id);
+  return { client_secret: session.client_secret, registrant: { first_name: registrant.first_name, last_name: registrant.last_name, email: registrant.email } };
+}
+
+const uuid = /^[0-9a-f-]{36}$/i;
+
+// Link in "complete your payment" emails: /api/pay?id=…&t=… (old emails use /landing/api/pay).
+// Opens the register page at the payment step.
 async function resumePayment(url, env, db) {
   const id = url.searchParams.get('id');
   const token = url.searchParams.get('t');
-  const uuid = /^[0-9a-f-]{36}$/i;
   if (!uuid.test(id || '') || !uuid.test(token || '')) return Response.redirect(`${env.SITE_URL}/register/`, 302);
 
-  const { data: registrant } = await db.from('registrants').select('*').eq('id', id).eq('pay_token', token).maybeSingle();
+  const { data: registrant } = await db.from('registrants').select('id, status').eq('id', id).eq('pay_token', token).maybeSingle();
   if (!registrant) return Response.redirect(`${env.SITE_URL}/register/`, 302);
   if (registrant.status === 'paid') return Response.redirect(`${env.SITE_URL}/success/?already=1`, 302);
+  return Response.redirect(`${env.SITE_URL}/register/?id=${id}&t=${token}`, 302);
+}
 
-  const session = await createCheckoutSession(env, registrant);
-  await db.from('registrants').update({ stripe_session_id: session.id }).eq('id', registrant.id);
-  return Response.redirect(session.url, 303);
+// POST /api/checkout {id, t}: the register page asking for a payment step for an existing registration.
+async function resumeCheckout(request, env, db) {
+  const { id, t } = await request.json().catch(() => ({}));
+  if (!uuid.test(id || '') || !uuid.test(t || '')) return json({ error: 'That payment link is not valid. Please register again.' }, 400);
+  const { data: registrant } = await db.from('registrants').select('*').eq('id', id).eq('pay_token', t).maybeSingle();
+  if (!registrant) return json({ error: 'That payment link is not valid. Please register again.' }, 404);
+  if (registrant.status === 'paid') return json({ error: 'You are already registered and paid. Check your inbox for your confirmation and Zoom link.', paid: true }, 409);
+  if (registrant.status !== 'pending') return json({ error: 'This registration can no longer be paid online. Please contact info@thearimatheaacademy.com and we will help.' }, 409);
+  return json(await startCheckout(env, db, registrant));
+}
+
+// Embedded Checkout for the retreat returns here: record the payment (the webhook may be slower), then thank them.
+async function retreatReturn(url, env, db, ctx) {
+  const sessionId = url.searchParams.get('session_id') || '';
+  if (!/^cs_(test|live)_\w+$/.test(sessionId)) return Response.redirect(`${env.SITE_URL}/retreat/`, 302);
+  const session = await stripeRequest(env, 'GET', `/v1/checkout/sessions/${sessionId}`);
+  if (session.metadata?.kind !== 'retreat') return Response.redirect(`${env.SITE_URL}/retreat/`, 302);
+  if (session.payment_status !== 'paid') return Response.redirect(`${env.SITE_URL}/retreat/booked/?processing=1`, 302);
+  const booking = await recordSession(env, db, session, ctx);
+  const q = new URLSearchParams({ ref: booking?.reference || '', status: booking?.status || 'paid' });
+  if (booking && booking.status === 'deposit_paid') q.set('balance', String(booking.total_amount - booking.amount_paid));
+  return Response.redirect(`${env.SITE_URL}/retreat/booked/?${q}`, 302);
 }
 
 // ── Stripe webhook: the source of truth for payment status ───
@@ -135,11 +212,20 @@ async function stripeWebhook(request, env, ctx) {
   const obj = event.data.object;
 
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-    const registrant = await markPaidFromSession(db, obj);
-    // Send the confirmation (+ Zoom link) straight away rather than waiting for the cron.
-    if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
+    if (obj.metadata?.kind === 'retreat') {
+      await recordSession(env, db, obj, ctx);
+    } else {
+      const registrant = await markPaidFromSession(db, obj);
+      // Send the confirmation (+ Zoom link) straight away rather than waiting for the cron.
+      if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
+    }
+  } else if (event.type === 'invoice.paid') {
+    await recordInvoice(env, db, obj, ctx);
+  } else if (event.type === 'invoice.voided' || event.type === 'invoice.marked_uncollectible') {
+    await db.from('retreat_bookings').update({ invoice_status: obj.status }).eq('stripe_invoice_id', obj.id);
   } else if (event.type === 'charge.refunded' && obj.refunded) {
     await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', obj.payment_intent);
+    await recordRefund(db, obj.payment_intent);
   }
   return json({ received: true });
 }
@@ -200,7 +286,7 @@ async function magicLink(env, db, registrant, redirectTo) {
 
 // Marks the session's registrant as paid. Returns the registrant only if this call changed them.
 async function markPaidFromSession(db, session) {
-  if (session.payment_status !== 'paid') return null;
+  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat') return null;
   const id = session.metadata?.registrant_id || session.client_reference_id;
   if (!id) return null;
   const { data, error } = await db
@@ -222,15 +308,22 @@ async function markPaidFromSession(db, session) {
 }
 
 // ── Admin API (Supabase JWT + public.admins membership) ──────
-async function adminApi(api, request, env, db) {
+async function adminApi(api, request, env, db, ctx) {
   const token = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
   const { data: userData, error: authErr } = await db.auth.getUser(token);
   if (authErr || !userData?.user) return json({ error: 'Unauthorised' }, 401);
   const { data: admin } = await db.from('admins').select('user_id').eq('user_id', userData.user.id).maybeSingle();
   if (!admin) return json({ error: 'Forbidden' }, 403);
 
+  if (api.startsWith('/admin/retreat/') && request.method === 'POST') {
+    return adminRetreat(api, request, env, db, userData.user.email, ctx);
+  }
+  if (isPreview(env) && ['/admin/run-scheduler', '/admin/sync'].includes(api)) {
+    return json({ error: 'Turned off in the preview: this would email real registrants. Use the live dashboard.' }, 403);
+  }
   if (api === '/admin/run-scheduler' && request.method === 'POST') {
-    return json(await runScheduler(env, db));
+    const [bootcamp, retreat] = await Promise.all([runScheduler(env, db), runRetreatReminders(env, db)]);
+    return json({ ...bootcamp, retreat });
   }
   if (api === '/admin/send' && request.method === 'POST') {
     // Send an email now to specific registrants (e.g. "resend payment link").
@@ -253,6 +346,7 @@ async function adminApi(api, request, env, db) {
     });
     // The charge.refunded webhook also does this; updating now keeps the dashboard instant.
     await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', payment_intent);
+    await recordRefund(db, payment_intent);
     return json({ ok: true });
   }
   if (api === '/admin/sync' && request.method === 'POST') {

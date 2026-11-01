@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book the End of Year Retreat | The Arimathea Academy</title>
+<meta name="description" content="Reserve your place at the End of Year Retreat, 28 to 31 December 2026 in Leicestershire. Pay in full or with a £50 deposit.">
+<meta name="theme-color" content="#1E3A1B">
+<meta property="og:title" content="Book the End of Year Retreat | The Arimathea Academy">
+<meta property="og:description" content="Reserve your place at the End of Year Retreat, 28 to 31 December 2026 in Leicestershire. Pay in full or with a £50 deposit.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Oswald:wght@400;500;600&amp;family=Poppins:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+<div style="font-family: 'Poppins', system-ui, sans-serif; color: #2B2A24; background: #FBF5E3; width: 100%; overflow-x: hidden">
+
+<header class="site-header">
+<div class="header-bar">
+<a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none">
+<svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#E9D08A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 23l-2-13 7 6 6-10 6 10 7-6-2 13z"></path><path d="M6 27h20"></path></svg>
+<span class="brand-name">THE ARIMATHEA ACADEMY</span>
+</a>
+<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="icon-open" d="M3 6h18M3 12h18M3 18h18"></path><path class="icon-close" d="M5 5l14 14M19 5L5 19"></path></svg>
+</button>
+<nav class="nav" id="site-nav" aria-label="Main">
+<a href="/programmes/">PROGRAMMES</a>
+<a href="/programmes/#sessions">COACHING</a>
+<a href="/#events" aria-current="page">EVENTS</a>
+<a href="/#books">BOOKS</a>
+<a href="/#about">ABOUT</a>
+<a href="/#contact">CONTACT</a>
+</nav>
+<a class="cta-gold header-cta" href="/retreat/book/">RESERVE YOUR PLACE</a>
+</div>
+</header>
+
+<section class="gold page-hero" style="position: relative; overflow: hidden">
+<div style="position: absolute; right: 0; bottom: 0; width: 0; height: 0; border-left: 150px solid transparent; border-bottom: 96px solid #B8862E" aria-hidden="true"></div>
+<div class="inner" style="position: relative">
+<div class="eyebrow">END OF YEAR RETREAT · 28 – 31 DECEMBER 2026</div>
+<h1 class="page-title">Reserve <span>your place</span></h1>
+<p class="lede">Four days away in Leicestershire with Coach Collins. Book for yourself, or for yourself and others, and pay in full or with a £50 deposit per person.</p>
+<ol class="steps" aria-label="Progress"><li aria-current="step">Booking details</li><li>Payment</li></ol>
+</div>
+</section>
+<div class="checkout">
+<div class="checkout-main">
+
+<section data-step="1" aria-labelledby="s1-title">
+<form id="details" novalidate>
+<div class="panel">
+<h2 class="panel-title" id="s1-title">Your details<small>You are the contact for this booking. Confirmations and payment links go to this email address.</small></h2>
+<div class="form-error" id="err1" role="alert"></div>
+<div class="form-grid">
+<div class="field"><label for="first_name">First name</label><input id="first_name" name="first_name" autocomplete="given-name" required maxlength="100"></div>
+<div class="field"><label for="last_name">Last name</label><input id="last_name" name="last_name" autocomplete="family-name" required maxlength="100"></div>
+</div>
+<div class="form-grid">
+<div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
+<div class="field"><label for="phone">Phone / WhatsApp</label><input id="phone" name="phone" type="tel" autocomplete="tel" required maxlength="40" placeholder="+44 7700 900000"></div>
+</div>
+</div>
+
+<div class="panel">
+<h2 class="panel-title">Who is coming?<small>Add everyone you are booking for, including yourself if you are attending. Up to 10 people per booking.</small></h2>
+<div id="attendees"></div>
+<button class="ghost-btn" type="button" id="add">+ Add another person</button>
+</div>
+
+<div class="panel">
+<h2 class="panel-title">How would you like to pay?</h2>
+<fieldset class="choice-group">
+<legend class="hp">Payment option</legend>
+<label class="choice"><input type="radio" name="payment_option" value="full" checked><div><strong>Pay in full</strong><span id="full-label">Pay the whole amount now.</span></div></label>
+<label class="choice"><input type="radio" name="payment_option" value="deposit"><div><strong>Pay a deposit</strong><span id="deposit-label">£50 per person now (non-refundable), and the balance later.</span></div></label>
+</fieldset>
+<p class="note" id="deposit-note" hidden>After paying the deposit we will email you a link to pay the balance whenever you are ready. You can also ask us for an invoice.</p>
+<div class="field" style="margin-top: 18px"><label for="special_requests">Anything else we should know? <span class="opt-label">(optional)</span></label><textarea id="special_requests" name="special_requests" maxlength="2000" placeholder="For example, who you would like to share a room with, or access needs."></textarea></div>
+<input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+<label class="check"><input type="checkbox" name="accept_terms" required> <span>I agree to the <a href="/terms/" target="_blank" rel="noopener">terms &amp; refund policy</a> and <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>.</span></label>
+<label class="check"><input type="checkbox" name="marketing_consent"> <span>Keep me updated about future Arimathea Academy programmes and events.</span></label>
+<button class="btn-primary" id="go" type="submit">Continue to payment</button>
+<p class="note">Nothing is charged until you confirm on the next step.</p>
+</div>
+</form>
+</section>
+
+<section data-step="2" aria-labelledby="s2-title" hidden>
+<div class="panel">
+<h2 class="panel-title" id="s2-title">Payment<small>Pay securely by card, Apple Pay or Google Pay. Payments are processed by Stripe.</small></h2>
+<div class="form-error" id="err2" role="alert"></div>
+<div class="paying-as"><span id="paying-as"></span><button class="ghost-btn" type="button" id="edit">Edit booking</button></div>
+<div id="checkout"></div>
+</div>
+</section>
+
+</div>
+
+<aside class="checkout-side" aria-label="Booking summary">
+<div class="summary">
+<div class="summary-label" id="sum-label">YOUR BOOKING</div>
+<h2>End of Year Retreat</h2>
+<dl id="sum-lines"></dl>
+<ul class="facts">
+<li><strong>When:</strong> Mon 28 – Thu 31 December 2026</li>
+<li><strong>Where:</strong> Leicestershire</li>
+<li><strong>Hosted by:</strong> Coach Collins</li>
+</ul>
+<div class="secure"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E9D08A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Your place is confirmed once payment is received. The deposit is non-refundable.</span></div>
+</div>
+</aside>
+</div>
+
+<template id="attendee-tpl">
+<div class="attendee">
+<div class="attendee-head"><h3>Person <span class="n"></span></h3><button class="link-btn remove" type="button">Remove</button></div>
+<div class="form-grid">
+<div class="field"><label>First name</label><input name="a_first" autocomplete="off" required maxlength="100"></div>
+<div class="field"><label>Last name</label><input name="a_last" autocomplete="off" required maxlength="100"></div>
+</div>
+<div class="form-grid">
+<div class="field"><label>Room</label><select name="a_room"><option value="double">Double (shared) · £285</option><option value="single">Single (private) · £345</option></select></div>
+<div class="field"><label>Dietary needs <span class="opt-label">(optional)</span></label><input name="a_diet" maxlength="500" placeholder="e.g. vegetarian, nut allergy"></div>
+</div>
+</div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var C = window.Checkout, PRICES = { double: 28500, single: 34500 }, DEPOSIT = 5000, MAX = 10;
+  var form = document.getElementById('details'), list = document.getElementById('attendees'), tpl = document.getElementById('attendee-tpl');
+  var err1 = document.getElementById('err1'), err2 = document.getElementById('err2'), go = document.getElementById('go'), box = document.getElementById('checkout');
+  var q = new URLSearchParams(location.search), saved = null; // saved = { id, token } of the unpaid booking being edited
+  var uid = 0;
+
+  function rows() { return Array.prototype.slice.call(list.querySelectorAll('.attendee')); }
+  function addAttendee(room) {
+    var node = tpl.content.firstElementChild.cloneNode(true), id = ++uid;
+    node.querySelectorAll('label').forEach(function (l, i) {
+      var input = l.nextElementSibling; input.id = 'a' + id + '-' + i; l.htmlFor = input.id;
+    });
+    if (room) node.querySelector('[name=a_room]').value = room;
+    node.querySelector('.remove').addEventListener('click', function () { node.remove(); renumber(); });
+    node.addEventListener('input', update);
+    node.addEventListener('change', update);
+    list.appendChild(node);
+    renumber();
+    return node;
+  }
+  function renumber() {
+    var all = rows();
+    all.forEach(function (r, i) {
+      r.querySelector('.n').textContent = i + 1;
+      r.querySelector('.remove').hidden = all.length === 1;
+      r.querySelectorAll('label').forEach(function (l) { l.dataset.base = l.dataset.base || l.textContent; });
+      r.querySelector('.remove').setAttribute('aria-label', 'Remove person ' + (i + 1));
+    });
+    document.getElementById('add').disabled = all.length >= MAX;
+    update();
+  }
+  function attendees() {
+    return rows().map(function (r) {
+      return { first_name: r.querySelector('[name=a_first]').value.trim(), last_name: r.querySelector('[name=a_last]').value.trim(), room: r.querySelector('[name=a_room]').value, dietary: r.querySelector('[name=a_diet]').value.trim() };
+    });
+  }
+  function option() { return form.querySelector('[name=payment_option]:checked').value; }
+
+  // Display only: the Worker recalculates every price.
+  function update() {
+    var a = attendees(), n = a.length, total = 0, counts = { double: 0, single: 0 };
+    a.forEach(function (x) { counts[x.room]++; total += PRICES[x.room]; });
+    var dep = n * DEPOSIT, opt = option(), lines = '';
+    if (counts.double) lines += '<dt>' + counts.double + ' × Double occupancy</dt><dd>' + C.gbp(counts.double * PRICES.double) + '</dd>';
+    if (counts.single) lines += '<dt>' + counts.single + ' × Single occupancy</dt><dd>' + C.gbp(counts.single * PRICES.single) + '</dd>';
+    lines += '<div class="rule" role="presentation"></div><dt>Total</dt><dd>' + C.gbp(total) + '</dd>';
+    if (opt === 'deposit') lines += '<dt>Balance to pay later</dt><dd>' + C.gbp(total - dep) + '</dd>';
+    lines += '<div class="due" style="display: contents"><dt>Due today</dt><dd>' + C.gbp(opt === 'deposit' ? dep : total) + '</dd></div>';
+    document.getElementById('sum-lines').innerHTML = lines;
+    document.getElementById('full-label').textContent = 'Pay ' + C.gbp(total) + ' now.';
+    document.getElementById('deposit-label').textContent = C.gbp(dep) + ' now (£50 per person, non-refundable), ' + C.gbp(total - dep) + ' later.';
+    document.getElementById('deposit-note').hidden = opt !== 'deposit';
+  }
+
+  // The first attendee starts as the booker; typing their own name fills it in until they change it.
+  var first = addAttendee(q.get('room') === 'single' ? 'single' : 'double');
+  ['first_name', 'last_name'].forEach(function (f, i) {
+    var src = document.getElementById(f), dst = first.querySelectorAll('input')[i];
+    src.addEventListener('input', function () { if (!dst.dataset.touched) dst.value = src.value; });
+    dst.addEventListener('input', function () { dst.dataset.touched = '1'; });
+  });
+  if (q.get('option') === 'deposit') form.querySelector('[value=deposit]').checked = true;
+  document.getElementById('add').addEventListener('click', function () { addAttendee().querySelector('input').focus(); });
+  form.addEventListener('change', update);
+  update();
+
+  function summary(b, dueNow, balanceMode) {
+    var lines = b.attendees.map(function (a) { return '<dt>' + C.escapeHtml(a.first_name + ' ' + a.last_name) + '</dt><dd>' + (a.room === 'single' ? 'Single' : 'Double') + '</dd>'; }).join('');
+    lines += '<div class="rule" role="presentation"></div><dt>Total</dt><dd>' + C.gbp(b.total) + '</dd>';
+    if (b.paid) lines += '<dt>Paid so far</dt><dd>' + C.gbp(b.paid) + '</dd>';
+    if (dueNow < b.total - b.paid) lines += '<dt>Balance to pay later</dt><dd>' + C.gbp(b.total - b.paid - dueNow) + '</dd>';
+    lines += '<div class="due" style="display: contents"><dt>' + (balanceMode ? 'To pay now' : 'Due today') + '</dt><dd>' + C.gbp(dueNow) + '</dd></div>';
+    document.getElementById('sum-lines').innerHTML = lines;
+    document.getElementById('sum-label').textContent = 'BOOKING ' + b.reference;
+  }
+
+  function toPayment(out, balanceMode) {
+    saved = { id: out.booking.id, token: out.booking.token };
+    summary(out.booking, out.due_now, balanceMode);
+    document.getElementById('paying-as').innerHTML = 'Booking for <strong>' + out.booking.attendees.length + (out.booking.attendees.length === 1 ? ' person' : ' people') + '</strong> · contact ' + C.escapeHtml(out.booking.email);
+    C.setStep(2);
+    return C.mount(out.client_secret, box).catch(function (e) { C.showError(err2, e.message); });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    C.clearError(err1);
+    form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
+    function bad(el, msg) { el.setAttribute('aria-invalid', 'true'); C.showError(err1, msg); }
+    var d = Object.fromEntries(new FormData(form));
+    if (!d.first_name.trim()) return bad(document.getElementById('first_name'), 'Please enter your first name.');
+    if (!d.last_name.trim()) return bad(document.getElementById('last_name'), 'Please enter your last name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) return bad(document.getElementById('email'), 'Please enter a valid email address.');
+    if (d.phone.replace(/\D/g, '').length < 7) return bad(document.getElementById('phone'), 'Please enter your phone / WhatsApp number.');
+    var people = attendees();
+    for (var i = 0; i < people.length; i++) {
+      if (!people[i].first_name || !people[i].last_name) return bad(rows()[i].querySelector(people[i].first_name ? '[name=a_last]' : '[name=a_first]'), 'Please enter a first and last name for person ' + (i + 1) + '.');
+    }
+    if (!d.accept_terms) return C.showError(err1, 'Please accept the terms to continue.');
+    var body = {
+      first_name: d.first_name, last_name: d.last_name, email: d.email, phone: d.phone, special_requests: d.special_requests,
+      payment_option: option(), attendees: people, accept_terms: true, marketing_consent: !!d.marketing_consent, website: d.website,
+    };
+    if (saved) { body.booking_id = saved.id; body.token = saved.token; }
+    go.disabled = true; go.textContent = 'Please wait…';
+    C.post('/retreat/book', body).then(function (out) { return toPayment(out, false); }).catch(function (e) { C.showError(err1, e.message); })
+      .finally(function () { go.disabled = false; go.textContent = 'Continue to payment'; });
+  });
+
+  document.getElementById('edit').addEventListener('click', function () { C.unmount(); C.clearError(err2); C.setStep(1); update(); });
+
+  // Balance links in emails: /retreat/book/?id=…&t=… opens straight at payment for what is still owed.
+  if (q.get('id') && q.get('t')) {
+    document.querySelector('.page-title').innerHTML = 'Pay your <span>balance</span>';
+    document.querySelector('.lede').textContent = 'Complete the payment for your End of Year Retreat booking.';
+    document.getElementById('edit').hidden = true;
+    C.setStep(2);
+    C.post('/retreat/checkout', { id: q.get('id'), t: q.get('t') }).then(function (out) { return toPayment(out, true); }).catch(function (e) {
+      if (e.data && e.data.booking) summary(e.data.booking, 0, true);
+      C.showError(err2, e.message);
+    });
+  }
+});
+</script>
+
+<footer class="site-footer">
+<div class="corner" aria-hidden="true"></div>
+<div class="inner">
+<span class="brand">THE ARIMATHEA ACADEMY</span>
+<span><a href="mailto:info@thearimatheaacademy.com">info@thearimatheaacademy.com</a> · <a href="tel:+447412045045">07412 045045</a> · © 2026 The Arimathea Academy · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms &amp; refunds</a></span>
+</div>
+</footer>
+</div>
+<script src="/assets/js/site.js" defer></script>
+<script src="/assets/js/checkout.js" defer></script>
+</body>
+</html>
