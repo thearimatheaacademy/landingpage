@@ -7,6 +7,8 @@
 - [x] Live site on `thearimatheaacademy.com`, `www`, `dashboard.` and `lms.`; email cron running again.
 
 ## Still to do after launch (Moi)
+- [ ] Add the secret **`PREVIEW_PASSWORD`** to `landingpage-preview` (the preview is locked until you do).
+- [ ] Supabase → Authentication → Providers → Email: confirm **"Confirm email" is on** (audit item needing validation).
 - [ ] Delete the two leftover routes on `landingpage`: `thearimatheaacademy.com/landing*` and `www.thearimatheaacademy.com/landing*` (not needed; the Worker redirects old `/landing` links itself).
 - [ ] Confirm `landingpage-preview` only has its workers.dev address (no custom domains).
 - [ ] Supabase Auth → URL configuration: Site URL `https://dashboard.thearimatheaacademy.com/`; turn on **leaked password protection**.

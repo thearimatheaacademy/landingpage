@@ -54,6 +54,11 @@ Read `CLAUDE.md` before editing. `docs/` holds decisions, content facts and the 
 A second Worker, **`landingpage-preview`**, serves the same site on Cloudflare's free address
 (`https://landingpage-preview.<your-account>.workers.dev`). It is set up in `wrangler.jsonc` under `env.preview`.
 
+**It is password-protected.** Add a secret `PREVIEW_PASSWORD` to the `landingpage-preview` Worker (Settings →
+Variables and Secrets → type Secret). Until it is set, the preview answers "locked". The browser asks for a username
+and password: type anything as the username and the preview password. Stripe's webhook is exempt, because it signs
+its own messages.
+
 How it differs from the real site:
 - No custom domains. The dashboard is at `/landing/admin/` and the student portal at `/landing/lms/` on the preview address.
 - **No scheduled emails.** It uses the real database, so the automatic reminders are switched off, and so are

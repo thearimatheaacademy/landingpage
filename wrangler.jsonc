@@ -25,6 +25,8 @@
   ],
   "workers_dev": true,
   "triggers": { "crons": ["*/5 * * * *"] },
+  // Public form posts (register, retreat booking, portal sign-in link): at most 6 a minute per connection.
+  "ratelimits": [{ "name": "FORM_LIMITER", "namespace_id": "1001", "simple": { "limit": 6, "period": 60 } }],
   "observability": { "enabled": true },
   "vars": {
     "SITE_URL": "https://thearimatheaacademy.com",
@@ -47,6 +49,7 @@
       "routes": [],
       "workers_dev": true,
       "triggers": { "crons": [] },
+      "ratelimits": [{ "name": "FORM_LIMITER", "namespace_id": "1002", "simple": { "limit": 6, "period": 60 } }],
       "vars": {
         "PREVIEW": "true",
         // These three are replaced at runtime with the preview's own address.
@@ -61,6 +64,7 @@
       }
     }
   }
+  // Preview also needs the secret PREVIEW_PASSWORD (the preview is locked without it).
   // Secrets (set with `npx wrangler secret put NAME`):
   //   SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
   //   optional: STRIPE_PRICE_ID (use an existing £150 Price instead of an inline price)
