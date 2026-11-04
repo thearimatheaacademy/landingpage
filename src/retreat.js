@@ -3,6 +3,9 @@
 import { createRetreatSession, sendRetreatInvoice, stripeRequest } from './stripe.js';
 import { deliver, loadSettings, escapeHtml, unwrap } from './email.js';
 
+const isName = (v) => /^[\p{L}\p{M}][\p{L}\p{M} '’-]{0,59}$/u.test(v);
+const countsAsPayment = (env, obj) => obj?.livemode !== false || env.PREVIEW === 'true';
+
 // ── Prices (pence). The server is the only place prices come from. ──
 export const ROOMS = {
   double: { price: 28500, name: 'Double occupancy', blurb: 'Shared room with one other attendee' },
@@ -73,6 +76,7 @@ export async function book(request, env, db) {
     payment_option: body.payment_option,
   };
   if (!booker.first_name || !booker.last_name) return json({ error: 'Please enter your first and last name.' }, 400);
+  if (!isName(booker.first_name) || !isName(booker.last_name)) return json({ error: 'Please use only letters, spaces, hyphens and apostrophes in names.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booker.email)) return json({ error: 'Please enter a valid email address.' }, 400);
   if (!booker.phone || booker.phone.replace(/\D/g, '').length < 7) return json({ error: 'Please enter your phone / WhatsApp number.' }, 400);
   if (body.accept_terms !== true) return json({ error: 'Please accept the terms to continue.' }, 400);
@@ -85,6 +89,7 @@ export async function book(request, env, db) {
     dietary: clean(a?.dietary, 500) || null,
   }));
   if (attendees.some((a) => !a.first_name || !a.last_name)) return json({ error: 'Please enter a first and last name for every attendee.' }, 400);
+  if (attendees.some((a) => !isName(a.first_name) || !isName(a.last_name))) return json({ error: 'Please use only letters, spaces, hyphens and apostrophes in names.' }, 400);
   let q;
   try { q = quote(attendees, booker.payment_option); } catch (e) { return json({ error: e.message }, 400); }
 
@@ -94,6 +99,8 @@ export async function book(request, env, db) {
   if (isUuid(body.booking_id) && isUuid(body.token)) {
     const { data: existing } = await db.from('retreat_bookings').select('*').eq('id', body.booking_id).eq('pay_token', body.token).maybeSingle();
     if (existing && existing.status === 'pending' && existing.amount_paid === 0) {
+      // The earlier payment page must not stay payable for the old (possibly cheaper) booking.
+      await expireSession(env, existing.stripe_session_id);
       booking = await db.from('retreat_bookings').update(row).eq('id', existing.id).select().single().then(unwrap);
       await db.from('retreat_attendees').delete().eq('booking_id', existing.id).then(unwrap);
     }
@@ -160,6 +167,12 @@ function checkoutFor(env, booking, attendees, kind) {
   return createRetreatSession(env, booking, { lines, paymentKind: kind, returnUrl });
 }
 
+// Expire an open Checkout Session (ignored if it is already paid, expired or missing).
+async function expireSession(env, id) {
+  if (!id) return;
+  await stripeRequest(env, 'POST', `/v1/checkout/sessions/${id}/expire`).catch(() => {});
+}
+
 async function findByToken(db, id, t) {
   if (!isUuid(id) || !isUuid(t)) return null;
   const { data: booking } = await db.from('retreat_bookings').select('*').eq('id', id).eq('pay_token', t).maybeSingle();
@@ -172,7 +185,7 @@ async function findByToken(db, id, t) {
 // Records a paid Checkout Session (from the webhook or the return page; whichever comes first wins).
 // Sends the right email only from the call that actually recorded the payment.
 export async function recordSession(env, db, session, ctx) {
-  if (session.metadata?.kind !== 'retreat' || session.payment_status !== 'paid') return null;
+  if (session.metadata?.kind !== 'retreat' || session.payment_status !== 'paid' || !countsAsPayment(env, session)) return null;
   const bookingId = session.metadata.booking_id || session.client_reference_id;
   if (!isUuid(bookingId)) return null;
   const kind = ['deposit', 'full', 'balance'].includes(session.metadata.payment_kind) ? session.metadata.payment_kind : 'balance';
@@ -190,7 +203,7 @@ export async function recordSession(env, db, session, ctx) {
 
 // invoice.paid webhook for invoices sent from the dashboard.
 export async function recordInvoice(env, db, invoice, ctx) {
-  if (invoice.metadata?.kind !== 'retreat' || !isUuid(invoice.metadata.booking_id) || !invoice.amount_paid) return null;
+  if (invoice.metadata?.kind !== 'retreat' || !isUuid(invoice.metadata.booking_id) || !invoice.amount_paid || !countsAsPayment(env, invoice)) return null;
   const result = await recordPayment(db, {
     booking: invoice.metadata.booking_id, kind: 'invoice', amount: invoice.amount_paid, currency: invoice.currency,
     invoice: invoice.id, intent: typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent?.id,
@@ -330,6 +343,7 @@ export async function adminRetreat(api, request, env, db, adminEmail, ctx) {
     if (booking.invoice_status === 'open') return json({ error: `Invoice ${booking.stripe_invoice_id} is still open. Void it in Stripe first, or wait for it to be paid.` }, 409);
     const days = Math.min(60, Math.max(1, Number(body.days_until_due) || 7));
     const description = clean(body.description, 200) || `End of Year Retreat balance, booking ${booking.reference}`;
+    await expireSession(env, booking.stripe_session_id); // an open balance page must not be paid as well as the invoice
     const { customer, invoice } = await sendRetreatInvoice(env, booking, { amount, description, daysUntilDue: days });
     await db.from('retreat_bookings').update({ stripe_customer_id: customer, stripe_invoice_id: invoice.id, invoice_status: invoice.status }).eq('id', booking.id);
     return json({ ok: true, invoice_id: invoice.id, hosted_invoice_url: invoice.hosted_invoice_url, status: invoice.status });

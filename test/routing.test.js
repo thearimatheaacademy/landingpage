@@ -54,9 +54,24 @@ test('dashboard and LMS keep working on their subdomains', async () => {
 });
 
 test('preview: dashboard and portal stay on the preview address; links point at it; no emails from cron', async () => {
-  const p = { ...env, PREVIEW: 'true', SUPABASE_SERVICE_ROLE_KEY: 'test' };
+  const p = { ...env, PREVIEW: 'true', SUPABASE_SERVICE_ROLE_KEY: 'test', PREVIEW_PASSWORD: 'open sesame' };
   const host = 'https://landingpage-preview.example.workers.dev';
-  const call = (u, init) => worker.fetch(new Request(host + u, { redirect: 'manual', ...init }), p, { waitUntil() {} });
+  const bare = (u, init = {}) => worker.fetch(new Request(host + u, { redirect: 'manual', ...init }), p, { waitUntil() {} });
+
+  // Locked without the password; the login sets a cookie that later requests (and the dashboard's API calls) carry.
+  assert.equal((await bare('/')).status, 401);
+  assert.equal((await bare('/', { headers: { authorization: 'Basic ' + btoa('x:wrong') } })).status, 401);
+  const login = await bare('/retreat/?a=1', { headers: { authorization: 'Basic ' + btoa('anyone:open sesame') } });
+  assert.equal(login.status, 302);
+  assert.equal(login.headers.get('location'), '/retreat/?a=1');
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const call = (u, init = {}) => bare(u, { ...init, headers: { cookie, ...(init.headers || {}) } });
+  assert.equal((await call('/api/config', { headers: { authorization: 'Bearer some-admin-jwt' } })).status, 200);
+  // Stripe's signed webhook still reaches the preview without the password.
+  assert.notEqual((await bare('/api/stripe-webhook', { method: 'POST', body: '{}' })).status, 401);
+  // No password configured = fully locked.
+  const locked = await worker.fetch(new Request(host + '/'), { ...p, PREVIEW_PASSWORD: '' }, { waitUntil() {} });
+  assert.equal(locked.status, 503);
 
   await call('/landing/admin/');
   assert.equal(served.at(-1), '/landing/admin/');

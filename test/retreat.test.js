@@ -189,3 +189,26 @@ test('names typed into the form cannot inject merge tags or HTML into emails', (
   const { html } = retreatEmail(env, b, [{ first_name: '<script>', last_name: '{{payment_link}}', room: 'double' }], 'deposit_confirmation');
   assert.doesNotMatch(html, /\{\{|<script>|<b>/);
 });
+
+test('audit fixes: test-mode payments are ignored on the live site, names are checked, old payment pages are expired', async () => {
+  const db = createClient();
+  // Names with digits or links are refused (they would end up in emails).
+  const bad = await book(req({ ...booker, first_name: 'Call 0800 000', payment_option: 'full', attendees: [twoPeople[0]] }), env, db);
+  assert.equal(bad.status, 400);
+  const badAttendee = await book(req({ ...booker, payment_option: 'full', attendees: [{ first_name: 'www.x.com', last_name: 'Y', room: 'double' }] }), env, db);
+  assert.equal(badAttendee.status, 400);
+  assert.equal((await book(req({ ...booker, first_name: "Zoë-Anne O'Neil", payment_option: 'full', attendees: [twoPeople[0]] }), env, db)).status, 200);
+
+  // A Stripe TEST-mode session never counts as payment on the live site (it does on the preview).
+  const b = DB.tables.retreat_bookings.at(-1);
+  const testSession = { id: 'cs_test_z', livemode: false, metadata: { kind: 'retreat', booking_id: b.id, payment_kind: 'full' }, payment_status: 'paid', amount_total: 28500, currency: 'gbp' };
+  assert.equal(await recordSession(env, db, testSession, ctx), null);
+  assert.equal(DB.tables.retreat_payments.length, 0);
+  assert.equal((await recordSession({ ...env, PREVIEW: 'true' }, db, testSession, ctx)).status, 'paid');
+
+  // Editing an unpaid booking expires the previous payment page.
+  stripeCalls = [];
+  const first = await (await book(req({ ...booker, payment_option: 'deposit', attendees: [twoPeople[0]] }), env, db)).json();
+  await book(req({ ...booker, payment_option: 'deposit', attendees: twoPeople, booking_id: first.booking.id, token: first.booking.token }), env, db);
+  assert.ok(stripeCalls.some((c) => c.path === `/v1/checkout/sessions/${DB.tables.retreat_bookings.find((x) => x.id === first.booking.id) && 'cs_test_1'}/expire`));
+});

@@ -51,8 +51,8 @@ function recalc(id) {
   const paid = ps.filter((p) => p.status === 'succeeded').reduce((n, p) => n + p.amount, 0);
   const refunded = ps.some((p) => p.status === 'refunded');
   b.amount_paid = paid;
-  b.status = paid >= b.total_amount ? 'paid' : paid > 0 ? 'deposit_paid' : refunded ? 'refunded' : ['deposit_paid', 'paid'].includes(b.status) ? 'pending' : b.status;
-  if (paid > 0) b.deposit_paid_at ??= new Date().toISOString();
+  b.status = paid >= b.total_amount ? 'paid' : paid > 0 && paid >= (b.deposit_amount ?? 0) ? 'deposit_paid' : paid > 0 ? 'pending' : refunded ? 'refunded' : ['deposit_paid', 'paid'].includes(b.status) ? 'pending' : b.status;
+  if (paid > 0 && paid >= (b.deposit_amount ?? 0)) b.deposit_paid_at ??= new Date().toISOString();
   b.paid_at = paid >= b.total_amount ? (b.paid_at ?? new Date().toISOString()) : null;
   return { ...b };
 }

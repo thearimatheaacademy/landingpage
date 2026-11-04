@@ -19,7 +19,11 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const preview = isPreview(env);
-    if (preview) env = previewEnv(env, url);
+    if (preview) {
+      env = previewEnv(env, url);
+      const gate = await previewGate(request, env, url);
+      if (gate) return gate;
+    }
     // Subdomain apps share this Worker: each one's root serves its page under /landing/.
     // The preview has no subdomains: the dashboard and portal stay at /landing/admin/ and /landing/lms/.
     const apps = preview ? [] : [[env.DASHBOARD_URL, `${LEGACY}/admin/`], [env.LMS_URL, `${LEGACY}/lms/`]];
@@ -49,6 +53,9 @@ export default {
     }
 
     try {
+      if (request.method === 'POST' && ['/register', '/retreat/book', '/lms/login', '/checkout', '/retreat/checkout'].includes(api) && !(await withinRateLimit(request, env))) {
+        return json({ error: 'Too many attempts from your connection. Please wait a minute and try again.' }, 429);
+      }
       if (api === '/config' && request.method === 'GET') {
         // Public values only: pages need these to start Supabase Auth and Stripe's embedded checkout.
         return json({ supabaseUrl: env.SUPABASE_URL, supabaseKey: env.SUPABASE_PUBLISHABLE_KEY, stripeKey: env.STRIPE_PUBLISHABLE_KEY });
@@ -96,6 +103,49 @@ function withHeaders(res, preview = false) {
 // ── Preview (`npm run preview:deploy`): the same site on its workers.dev address, for testing before the
 // domain moves. Links in emails and Stripe return addresses point back at whatever address it is served on.
 const isPreview = (env) => env.PREVIEW === 'true';
+
+// The preview shares the real database, so only people with the preview password may use it.
+// The signed Stripe webhook is exempt (Stripe can't log in). A browser that has logged in once gets a
+// cookie, so the dashboard's own API calls (which use their own Authorization header) keep working.
+async function previewGate(request, env, url) {
+  if (url.pathname === '/api/stripe-webhook' || url.pathname === `${LEGACY}/api/stripe-webhook`) return null;
+  if (!env.PREVIEW_PASSWORD) return new Response('Preview is locked: add a PREVIEW_PASSWORD secret to the landingpage-preview Worker.', { status: 503 });
+  const token = await sha256(`preview:${env.PREVIEW_PASSWORD}`);
+  const cookie = (request.headers.get('cookie') || '').split(/;\s*/).find((c) => c.startsWith('preview_ok='))?.slice(11);
+  if (cookie && timingSafeEqualStr(cookie, token)) return null;
+  const auth = request.headers.get('authorization') || '';
+  if (auth.startsWith('Basic ')) {
+    let pass = '';
+    try { pass = atob(auth.slice(6)).split(':').slice(1).join(':'); } catch {}
+    if (timingSafeEqualStr(await sha256(`preview:${pass}`), token)) {
+      // Send them back to the same page with the cookie set.
+      return new Response(null, { status: 302, headers: { location: url.pathname + url.search, 'set-cookie': `preview_ok=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000` } });
+    }
+  }
+  return new Response('Preview: sign in with any username and the preview password.', { status: 401, headers: { 'www-authenticate': 'Basic realm="Arimathea preview", charset="UTF-8"', 'x-robots-tag': 'noindex' } });
+}
+
+async function sha256(text) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+function timingSafeEqualStr(a, b) {
+  if (a.length !== b.length) return false;
+  let x = 0;
+  for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return x === 0;
+}
+
+// Cloudflare rate-limiting binding (wrangler.jsonc "ratelimits"): a few form posts per minute per connection.
+async function withinRateLimit(request, env) {
+  if (!env.FORM_LIMITER) return true;
+  const key = request.headers.get('cf-connecting-ip') || 'unknown';
+  const { success } = await env.FORM_LIMITER.limit({ key });
+  return success;
+}
+
+// Real money only: a Stripe test-mode object never counts as payment on the live site.
+export const countsAsPayment = (env, obj) => obj?.livemode !== false || isPreview(env);
 function previewEnv(env, url) {
   return { ...env, SITE_URL: url.origin, DASHBOARD_URL: `${url.origin}${LEGACY}/admin/`, LMS_URL: `${url.origin}${LEGACY}/lms/` };
 }
@@ -111,6 +161,9 @@ function json(data, status = 200) {
 }
 
 const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Names: letters (any language), spaces, hyphens and apostrophes (no digits, dots or slashes). Stops form text being used to
+// put messages, links or phone numbers into the emails we send.
+export const isName = (v) => /^[\p{L}\p{M}][\p{L}\p{M} '’-]{0,59}$/u.test(v);
 
 // ── Public: registration ─────────────────────────────────────
 async function register(request, env, db) {
@@ -129,6 +182,7 @@ async function register(request, env, db) {
     marketing_consent: body.marketing_consent === true,
   };
   if (!r.first_name || !r.last_name) return json({ error: 'Please enter your first and last name.' }, 400);
+  if (!isName(r.first_name) || !isName(r.last_name)) return json({ error: 'Please use only letters, spaces, hyphens and apostrophes in names.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) return json({ error: 'Please enter a valid email address.' }, 400);
   if (!r.phone || r.phone.replace(/\D/g, '').length < 7) return json({ error: 'Please enter your phone / WhatsApp number.' }, 400);
   if (body.accept_terms !== true) return json({ error: 'Please accept the terms to continue.' }, 400);
@@ -152,14 +206,15 @@ async function register(request, env, db) {
     registrant = data;
   }
 
-  return json(await startCheckout(env, db, registrant));
+  // Echo back only what this caller typed, never the stored record of whoever owns the email.
+  return json(await startCheckout(env, db, registrant, { first_name: r.first_name, last_name: r.last_name, email: r.email }));
 }
 
 // Step 2 of /register/: an Embedded Checkout session for this registrant.
-async function startCheckout(env, db, registrant) {
+async function startCheckout(env, db, registrant, shown = registrant) {
   const session = await createCheckoutSession(env, registrant);
   await db.from('registrants').update({ stripe_session_id: session.id }).eq('id', registrant.id);
-  return { client_secret: session.client_secret, registrant: { first_name: registrant.first_name, last_name: registrant.last_name, email: registrant.email } };
+  return { client_secret: session.client_secret, registrant: { first_name: shown.first_name, last_name: shown.last_name, email: shown.email } };
 }
 
 const uuid = /^[0-9a-f-]{36}$/i;
@@ -215,7 +270,7 @@ async function stripeWebhook(request, env, ctx) {
     if (obj.metadata?.kind === 'retreat') {
       await recordSession(env, db, obj, ctx);
     } else {
-      const registrant = await markPaidFromSession(db, obj);
+      const registrant = await markPaidFromSession(db, obj, env);
       // Send the confirmation (+ Zoom link) straight away rather than waiting for the cron.
       if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
     }
@@ -240,7 +295,7 @@ async function claimAfterPayment(url, env, db, ctx) {
   if (session.payment_status !== 'paid') return Response.redirect(`${env.SITE_URL}/success/?processing=1`, 302);
 
   // The webhook may not have arrived yet; marking paid here is idempotent.
-  const changed = await markPaidFromSession(db, session);
+  const changed = await markPaidFromSession(db, session, env);
   if (changed) ctx.waitUntil(sendToRegistrant(env, db, changed).catch((e) => console.error('confirm email', e)));
 
   // Auto sign-in only right after checkout; an old link falls back to the normal sign-in page.
@@ -285,8 +340,8 @@ async function magicLink(env, db, registrant, redirectTo) {
 }
 
 // Marks the session's registrant as paid. Returns the registrant only if this call changed them.
-async function markPaidFromSession(db, session) {
-  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat') return null;
+async function markPaidFromSession(db, session, env) {
+  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat' || !countsAsPayment(env, session)) return null;
   const id = session.metadata?.registrant_id || session.client_reference_id;
   if (!id) return null;
   const { data, error } = await db
@@ -355,7 +410,7 @@ async function adminApi(api, request, env, db, ctx) {
     let updated = 0;
     for (const r of pending || []) {
       const session = await stripeRequest(env, 'GET', `/v1/checkout/sessions/${r.stripe_session_id}`);
-      const registrant = await markPaidFromSession(db, session);
+      const registrant = await markPaidFromSession(db, session, env);
       if (registrant) { updated++; await sendToRegistrant(env, db, registrant); }
     }
     return json({ checked: pending?.length || 0, updated });
@@ -372,6 +427,11 @@ async function listPayments(env, db, startingAfter) {
     ? await db.from('registrants').select('id, first_name, last_name, email, stripe_payment_intent').in('stripe_payment_intent', intents)
     : { data: [] };
   const byIntent = Object.fromEntries((regs || []).map((r) => [r.stripe_payment_intent, r]));
+  // Retreat payments (deposits, balances, invoices) are matched to their booking.
+  const { data: rps } = intents.length
+    ? await db.from('retreat_payments').select('stripe_payment_intent, booking:retreat_bookings(id, reference, first_name, last_name, email)').in('stripe_payment_intent', intents)
+    : { data: [] };
+  const bookingByIntent = Object.fromEntries((rps || []).filter((x) => x.booking).map((x) => [x.stripe_payment_intent, x.booking]));
   return {
     has_more: charges.has_more,
     payments: charges.data.map((c) => ({
@@ -387,6 +447,7 @@ async function listPayments(env, db, startingAfter) {
       card: c.payment_method_details?.card ? `${c.payment_method_details.card.brand} •••• ${c.payment_method_details.card.last4}` : c.payment_method_details?.type,
       receipt_url: c.receipt_url,
       registrant: byIntent[c.payment_intent] || null,
+      booking: bookingByIntent[c.payment_intent] || null,
     })),
   };
 }

@@ -30,6 +30,8 @@ Newest last. "Moi" = the client/owner. "Claude" = recommendation made during the
 | 24 | 1 Nov | Retreat data lives in new tables (`retreat_bookings`, `retreat_attendees`, `retreat_payments`), separate from bootcamp `registrants`, so retreat bookers don't get bootcamp emails or portal access. Amount paid is recalculated in the database from the payments table, and each Stripe session/invoice can only count once. | Data safety. |
 | 25 | 1 Nov | Stripe API version pinned to `2024-06-20` in the Worker. | Stops a dashboard API upgrade from silently changing request/response shapes. |
 | 26 | 1 Nov | **Preview Worker** `landingpage-preview` on workers.dev for testing before the domain moves. Shares the real database, so its cron is off, bulk email actions are blocked, and links point at its own address. Stripe test keys only. | Moi chose this testing route. |
+| 27 | 4 Nov | **Security audit fixes.** Preview locked behind `PREVIEW_PASSWORD`; the live site ignores Stripe test-mode payments; names may only contain letters, spaces, hyphens and apostrophes (stops links and phone numbers being put into our emails); public forms are rate-limited (6 a minute per connection); editing a retreat booking or sending an invoice expires the old payment page; "deposit paid" needs the full deposit (migration 0007); registration no longer reveals stored names. | Audit run 1. |
+| 28 | 4 Nov | Dashboard covers every programme: Overview shows bootcamp and retreat together, the menu says "Bootcamp" and "Retreat", and Payments names retreat bookers. | Moi: a retreat booking was only visible under Retreat. |
 
 ## Where the design lives
 - Live canvas (Claude Design artifact, private to Moi): "KSBM Bootcamp Landing Page", artboards Home, Bootcamp, Retreat,

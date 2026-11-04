@@ -185,24 +185,27 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
   <main>
     <!-- Overview -->
     <section data-page="overview">
-      <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Overview</h1></div>
-        <div class="acts"><a class="btn ghost" href="https://thearimatheaacademy.com/bootcamp/" target="_blank">View sales page</a></div></div>
+      <div class="head"><div><div class="crumb">The Arimathea Academy · All programmes</div><h1>Overview</h1></div>
+        <div class="acts"><a class="btn ghost" href="https://thearimatheaacademy.com/" target="_blank">View website</a></div></div>
       <div class="stats" id="ovStats"></div>
       <div class="grid2">
         <div class="panel pad">
-          <div class="crumb">Payment status</div>
+          <div class="crumb">Bootcamp · payment status</div>
           <div class="bar" id="ovBar"></div>
           <div class="legend" id="ovLegend"></div>
+          <div class="crumb" style="margin-top:22px">End of Year Retreat · bookings</div>
+          <div class="bar" id="ovRtBar"></div>
+          <div class="legend" id="ovRtLegend"></div>
           <h2 style="margin-top:22px">Next scheduled emails</h2>
           <ul class="feed" id="ovNext" style="margin:0 -22px -22px"></ul>
         </div>
-        <div class="panel"><div class="tools"><b style="font:600 16px Oswald,sans-serif;color:var(--green)">Latest registrations</b><a href="#registrants">View all →</a></div><ul class="feed" id="ovLatest"></ul></div>
+        <div class="panel"><div class="tools"><b style="font:600 16px Oswald,sans-serif;color:var(--green)">Latest activity</b><span><a href="#registrants">Bootcamp →</a> &nbsp; <a href="#retreat">Retreat →</a></span></div><ul class="feed" id="ovLatest"></ul></div>
       </div>
     </section>
 
     <!-- Registrants -->
     <section data-page="registrants" class="hidden">
-      <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Registrants</h1></div>
+      <div class="head"><div><div class="crumb">Kingdom School · Cohort Dec 2026</div><h1>Bootcamp registrants</h1></div>
         <div class="acts"><button class="btn ghost" id="importCsv">Import CSV</button><button class="btn ghost hm" id="csv">Export CSV</button><button class="btn" id="emailFiltered">Email this list</button></div></div>
       <div class="stats" id="rgStats"></div>
       <div class="panel">
@@ -311,7 +314,7 @@ const I = {
   more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const PAGES = [['overview', 'Overview'], ['registrants', 'Registrants'], ['retreat', 'Retreat'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
+const PAGES = [['overview', 'Overview'], ['registrants', 'Bootcamp'], ['retreat', 'Retreat'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
 
 // Navigation: sidebar on desktop, bottom tab bar (+ More sheet) on phones.
 $('#nav').innerHTML = PAGES.map(([k, l, sep]) => `${sep ? `<div class="sep">${sep}</div>` : ''}<a href="#${k}" data-nav="${k}">${icon(k)}${l}${k === 'registrants' ? '<span class="count" id="navCount"></span>' : ''}</a>`).join('');
@@ -432,15 +435,28 @@ const weekAgo = () => Date.now() - 7 * 864e5;
 
 // ── Overview ──
 loaders.overview = async () => {
-  await loadPeople();
+  await Promise.all([loadPeople(), loadBookings()]);
   const c = counts();
-  const conv = c.all ? Math.round((c.paid / c.all) * 100) : 0;
-  const newThisWeek = people.filter((p) => new Date(p.created_at) > weekAgo()).length;
-  $('#ovStats').innerHTML = stat('Registered', c.all, `+${newThisWeek} this week`) + stat('Paid', c.paid, `${conv}% conversion`, 'up') + stat('Not paid yet', c.pending, c.pending ? 'Reminders run automatically' : 'All caught up', c.pending ? 'warn' : '') + stat('Revenue', gbp(revenue()), 'via Stripe');
+  const L = bookings.filter((b) => ['paid', 'deposit_paid'].includes(b.status));
+  const attending = L.reduce((n, b) => n + b.people.length, 0);
+  const retreatIn = bookings.reduce((n, b) => n + b.amount_paid, 0);
+  const owed = L.reduce((n, b) => n + b.total_amount - b.amount_paid, 0);
+  $('#ovStats').innerHTML = stat('Bootcamp paid', c.paid, `${c.all} registered · ${c.pending} not paid yet`, 'up')
+    + stat('Retreat attending', attending, `${L.length} booking${L.length === 1 ? '' : 's'}`, 'up')
+    + stat('Collected', gbp(revenue() + retreatIn), 'bootcamp + retreat')
+    + stat('Retreat balances due', gbp(owed), owed ? 'Balance links sent automatically' : 'All paid', owed ? 'warn' : '');
   const seg = [['paid', '#2F7A2A', 'Paid'], ['pending', '#D9A53A', 'Not paid'], ['refunded', '#A8A397', 'Refunded'], ['cancelled', '#D8D2C0', 'Cancelled']];
   $('#ovBar').innerHTML = c.all ? seg.map(([k, col]) => `<span style="width:${(c[k] / c.all) * 100}%;background:${col}"></span>`).join('') : '';
   $('#ovLegend').innerHTML = seg.map(([k, col, l]) => `<span><i style="background:${col}"></i>${l} ${c[k]}</span>`).join('');
-  $('#ovLatest').innerHTML = people.slice(0, 8).map((p) => `<li class="click" data-id="${p.id}" style="cursor:pointer"><div class="who"><i>${esc(initials(p.first_name, p.last_name))}</i><span>${esc(p.first_name)} ${esc(p.last_name)}</span></div>${pill(p.status)}<span class="t">${ago(p.created_at)}</span></li>`).join('') || '<li class="empty">No registrations yet. Share the sales page to get started.</li>';
+  const rc = {}; bookings.forEach((b) => (rc[b.status] = (rc[b.status] || 0) + 1));
+  const rseg = [['paid', '#2F7A2A', 'Paid in full'], ['deposit_paid', '#3E6FA0', 'Deposit paid'], ['pending', '#D9A53A', 'Not paid'], ['refunded', '#A8A397', 'Refunded'], ['cancelled', '#D8D2C0', 'Cancelled']];
+  $('#ovRtBar').innerHTML = bookings.length ? rseg.map(([k, col]) => `<span style="width:${((rc[k] || 0) / bookings.length) * 100}%;background:${col}"></span>`).join('') : '';
+  $('#ovRtLegend').innerHTML = rseg.filter(([k]) => rc[k] || ['paid', 'deposit_paid'].includes(k)).map(([k, col, l]) => `<span><i style="background:${col}"></i>${l} ${rc[k] || 0}</span>`).join('');
+  const feed = [
+    ...people.map((p) => ({ kind: 'person', id: p.id, first: p.first_name, last: p.last_name, status: p.status, at: p.created_at, tag: 'Bootcamp' })),
+    ...bookings.map((b) => ({ kind: 'booking', id: b.id, first: b.first_name, last: b.last_name, status: b.status, at: b.created_at, tag: `Retreat · ${b.reference} · ${b.people.length} ${b.people.length === 1 ? 'person' : 'people'}` })),
+  ].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 10);
+  $('#ovLatest').innerHTML = feed.map((f) => `<li class="click" data-kind="${f.kind}" data-id="${esc(f.id)}" style="cursor:pointer"><div class="who"><i>${esc(initials(f.first, f.last))}</i><span>${esc(f.first)} ${esc(f.last)}<small style="display:block">${esc(f.tag)}</small></span></div>${pill(f.status)}<span class="t">${ago(f.at)}</span></li>`).join('') || '<li class="empty">No registrations or bookings yet.</li>';
   const now = new Date().toISOString();
   const [{ data: camps }, { data: steps }] = await Promise.all([
     sb.from('email_campaigns').select('subject, scheduled_for').eq('status', 'scheduled').gte('scheduled_for', now).order('scheduled_for').limit(3),
@@ -449,7 +465,7 @@ loaders.overview = async () => {
   const next = [...(camps || []).map((x) => [x.subject, x.scheduled_for]), ...(steps || []).map((x) => [x.subject, x.send_at])].filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1])).slice(0, 4);
   $('#ovNext').innerHTML = next.map(([s, at]) => `<li>${icon('emails', 18)}<span>${esc(s)}</span><span class="t">${fmt(at)}</span></li>`).join('') || '<li class="empty">Nothing scheduled.</li>';
 };
-$('#ovLatest').onclick = (e) => { const li = e.target.closest('[data-id]'); if (li) openPerson(li.dataset.id); };
+$('#ovLatest').onclick = (e) => { const li = e.target.closest('[data-id]'); if (li) (li.dataset.kind === 'booking' ? openBooking : openPerson)(li.dataset.id); };
 
 // ── Registrants ──
 let filter = '';
@@ -754,9 +770,10 @@ async function loadPayments() {
   const refunded = payments.reduce((s, p) => s + p.amount_refunded, 0);
   $('#pyStats').innerHTML = stat('Payments', ok.length, `${payments.length} loaded`) + stat('Gross', gbp(gross)) + stat('Refunded', gbp(refunded), '', refunded ? 'warn' : '') + stat('Net', gbp(gross - refunded), 'before Stripe fees', 'up');
   $('#pays').innerHTML = payments.map((p, i) => {
-    const r = p.registrant;
+    const r = p.registrant || p.booking;
     const name = r ? `${r.first_name} ${r.last_name}` : p.name || p.email || 'Unknown';
-    return `<tr class="${r ? 'click' : ''}" data-i="${i}"><td><div class="who"><i>${esc(initials(...name.split(' ')))}</i><span>${esc(name)}<small>${esc(p.email || '')}</small></span></div></td>
+    const tag = p.booking ? `Retreat · ${p.booking.reference}` : p.registrant ? 'Bootcamp' : '';
+    return `<tr class="${r ? 'click' : ''}" data-i="${i}"><td><div class="who"><i>${esc(initials(...name.split(' ')))}</i><span>${esc(name)}<small style="display:block">${esc([tag, p.email].filter(Boolean).join(' · '))}</small></span></div></td>
       <td class="num">${gbp(p.amount)}${p.amount_refunded && p.amount_refunded < p.amount ? `<div class="hint">${gbp(p.amount_refunded)} refunded</div>` : ''}</td>
       <td>${pill(p.status)}</td><td class="hm mut" style="text-transform:capitalize">${esc(p.card || '')}</td><td class="hm mut">${fmt(p.created * 1000)}</td>
       <td style="text-align:right;white-space:nowrap">${p.receipt_url ? `<a href="${esc(p.receipt_url)}" target="_blank" class="hm">Receipt</a> ` : ''}${p.status === 'succeeded' ? `<button class="btn danger" data-refund="${i}" style="padding:5px 10px;margin-left:8px">Refund</button>` : ''}</td></tr>`;
@@ -766,10 +783,11 @@ async function loadPayments() {
 }
 $('#pays').onclick = (e) => {
   const rb = e.target.closest('[data-refund]');
-  if (rb) { const p = payments[rb.dataset.refund]; return refund(p.payment_intent, p.registrant ? `${p.registrant.first_name} ${p.registrant.last_name}` : p.email, p.amount); }
+  if (rb) { const p = payments[rb.dataset.refund]; const r = p.registrant || p.booking; return refund(p.payment_intent, r ? `${r.first_name} ${r.last_name}${p.booking ? ` (${p.booking.reference})` : ''}` : p.email, p.amount); }
   const tr = e.target.closest('tr[data-i]');
   const p = tr && payments[tr.dataset.i];
-  if (p?.registrant) openPerson(p.registrant.id);
+  if (p?.booking) openBooking(p.booking.id);
+  else if (p?.registrant) openPerson(p.registrant.id);
 };
 $('#sync').onclick = (e) => busy(e.target, 'Syncing…', async () => {
   const r = await api('sync');
