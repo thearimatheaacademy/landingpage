@@ -6,8 +6,9 @@ export const STRIPE_API_VERSION = '2024-06-20';
 
 const BOOTCAMP_NAME = 'Kingdom School of Business & Ministry Bootcamp';
 
-// Bootcamp: one £150 place. Embedded Checkout, shown inside step 2 of /register/.
-export async function createCheckoutSession(env, registrant) {
+// Bootcamp: the full £150, or one £50 instalment. Embedded Checkout, shown inside step 2 of /register/.
+// `next` comes from plan.js nextPayment(): { amount, instalment } (instalment null = paying in full).
+export async function createCheckoutSession(env, registrant, next = { amount: 15000, instalment: null }) {
   const p = {
     ui_mode: 'embedded',
     mode: 'payment',
@@ -15,6 +16,8 @@ export async function createCheckoutSession(env, registrant) {
     client_reference_id: registrant.id,
     'metadata[kind]': 'bootcamp',
     'metadata[registrant_id]': registrant.id,
+    'metadata[payment_kind]': next.instalment ? 'instalment' : 'full',
+    ...(next.instalment ? { 'metadata[instalment]': String(next.instalment) } : {}),
     'payment_intent_data[metadata][registrant_id]': registrant.id,
     'payment_intent_data[description]': BOOTCAMP_NAME,
     // After paying, students go straight into the portal (see claimAfterPayment).
@@ -23,7 +26,14 @@ export async function createCheckoutSession(env, registrant) {
     // Sessions expire after 24h; the reminder emails create a fresh one via /api/pay.
     expires_at: String(Math.floor(Date.now() / 1000) + 23 * 3600),
   };
-  if (env.STRIPE_PRICE_ID) {
+  if (next.instalment) {
+    Object.assign(p, {
+      'line_items[0][price_data][currency]': 'gbp',
+      'line_items[0][price_data][unit_amount]': String(next.amount),
+      'line_items[0][price_data][product_data][name]': `${BOOTCAMP_NAME}: instalment ${next.instalment} of 3`,
+      'line_items[0][price_data][product_data][description]': '£150 paid in 3 monthly instalments of £50 · Every Friday from 11 December 2026 · Zoom',
+    });
+  } else if (env.STRIPE_PRICE_ID) {
     p['line_items[0][price]'] = env.STRIPE_PRICE_ID;
   } else {
     Object.assign(p, {
@@ -34,7 +44,7 @@ export async function createCheckoutSession(env, registrant) {
     });
   }
   // Same registrant retrying within a minute reuses the same session.
-  return stripeRequest(env, 'POST', '/v1/checkout/sessions', p, `${registrant.id}-${Math.floor(Date.now() / 60000)}`);
+  return stripeRequest(env, 'POST', '/v1/checkout/sessions', p, `${registrant.id}-${next.instalment || 'full'}-${Math.floor(Date.now() / 60000)}`);
 }
 
 // Retreat: any set of line items ({ name, description, amount, quantity }) for one booking.

@@ -430,6 +430,9 @@ const counts = () => {
   people.forEach((p) => c[p.status]++);
   return c;
 };
+// Bootcamp plans: full £150, or 3 instalments of £50 (amount_paid grows with each one).
+const owedBootcamp = (p) => (p.payment_plan === 'instalments' && p.status === 'paid' ? Math.max(0, (p.amount_due || 15000) - (p.amount_paid || 0)) : 0);
+const planTag = (p) => (p.payment_plan === 'instalments' ? ` <small class="mut" style="display:inline">${gbp(p.amount_paid || 0)} of ${gbp(p.amount_due || 15000)}</small>` : '');
 const revenue = () => people.filter((p) => p.status === 'paid').reduce((s, p) => s + (p.amount_paid || 0), 0);
 const weekAgo = () => Date.now() - 7 * 864e5;
 
@@ -441,7 +444,7 @@ loaders.overview = async () => {
   const attending = L.reduce((n, b) => n + b.people.length, 0);
   const retreatIn = bookings.reduce((n, b) => n + b.amount_paid, 0);
   const owed = L.reduce((n, b) => n + b.total_amount - b.amount_paid, 0);
-  $('#ovStats').innerHTML = stat('Bootcamp paid', c.paid, `${c.all} registered · ${c.pending} not paid yet`, 'up')
+  $('#ovStats').innerHTML = stat('Bootcamp paid', c.paid, `${c.all} registered · ${c.pending} not paid yet${people.some((p) => owedBootcamp(p)) ? ` · ${gbp(people.reduce((n, p) => n + owedBootcamp(p), 0))} in instalments to come` : ''}`, 'up')
     + stat('Retreat attending', attending, `${L.length} booking${L.length === 1 ? '' : 's'}`, 'up')
     + stat('Collected', gbp(revenue() + retreatIn), 'bootcamp + retreat')
     + stat('Retreat balances due', gbp(owed), owed ? 'Balance links sent automatically' : 'All paid', owed ? 'warn' : '');
@@ -480,7 +483,7 @@ function renderPeople() {
   $('#chips').innerHTML = [['', 'All', c.all], ['paid', 'Paid', c.paid], ['pending', 'Not paid', c.pending], ['refunded', 'Refunded', c.refunded], ['cancelled', 'Cancelled', c.cancelled]]
     .filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button class="chip ${filter === k ? 'on' : ''}" data-f="${k}">${l} ${n}</button>`).join('');
   const list = filtered();
-  $('#rows').innerHTML = list.map((p) => `<tr class="click" data-id="${p.id}"><td><div class="who"><i>${esc(initials(p.first_name, p.last_name))}</i><span>${esc(p.first_name)} ${esc(p.last_name)}<small>${esc(p.email)}</small></span></div></td><td class="hm mut">${esc(p.email)}</td><td class="hm mut">${esc(p.phone)}</td><td>${pill(p.status)}</td><td class="hm mut">${day(p.created_at)}</td></tr>`).join('')
+  $('#rows').innerHTML = list.map((p) => `<tr class="click" data-id="${p.id}"><td><div class="who"><i>${esc(initials(p.first_name, p.last_name))}</i><span>${esc(p.first_name)} ${esc(p.last_name)}<small>${esc(p.email)}</small></span></div></td><td class="hm mut">${esc(p.email)}</td><td class="hm mut">${esc(p.phone)}</td><td>${pill(p.status)}${planTag(p)}</td><td class="hm mut">${day(p.created_at)}</td></tr>`).join('')
     || `<tr><td colspan="5" class="empty">${people.length ? 'No one matches this search.' : 'No registrations yet.'}</td></tr>`;
 }
 $('#q').oninput = renderPeople;
@@ -580,28 +583,46 @@ $('#emailFiltered').onclick = () => { const l = filtered(); l.length ? composeDi
 async function openPerson(id) {
   const p = people.find((x) => x.id === id);
   if (!p) return;
-  const { data: log } = await sb.from('email_log').select('*').eq('registrant_id', id).order('created_at', { ascending: false });
+  const [{ data: log }, { data: instal }] = await Promise.all([
+    sb.from('email_log').select('*').eq('registrant_id', id).order('created_at', { ascending: false }),
+    sb.from('bootcamp_payments').select('*').eq('registrant_id', id).order('created_at'),
+  ]);
   const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
+  const inst = p.payment_plan === 'instalments';
+  const owed = inst ? (p.amount_due || 15000) - (p.amount_paid || 0) : 0;
+  const planLine = inst ? `3 instalments of £50 · <b>${gbp(p.amount_paid || 0)}</b> of ${gbp(p.amount_due || 15000)} paid${owed > 0 ? ` · <b style="color:#9a6a12">${gbp(owed)} to pay</b>` : ''}` : 'Paid in full (£150)';
   $('#dlgBody').innerHTML = `
     <h3>${esc(p.first_name)} ${esc(p.last_name)} ${pill(p.status)}</h3>
-    <dl class="kv">${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at) + (p.source === 'import' ? ' (imported)' : ''))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${p.status === 'paid' ? kv('Student portal', p.user_id ? 'Account active' : 'Not signed in yet') : ''}</dl>
+    <dl class="kv"><dt>Payment plan</dt><dd>${planLine}</dd>${kv('Email', p.email)}${kv('Phone / WhatsApp', p.phone)}${kv('Country', p.country)}${kv('Organisation', p.organisation)}${kv('Heard via', p.how_heard)}${kv('Hoping to build', p.goals)}${kv('Marketing', p.marketing_consent ? 'Opted in' : 'No')}${kv('Registered', fmt(p.created_at) + (p.source === 'import' ? ' (imported)' : ''))}${kv('Paid', p.paid_at ? fmt(p.paid_at) + (p.amount_paid ? ' · ' + gbp(p.amount_paid) : '') : '')}${kv('Payment note', p.payment_method_note)}${p.status === 'paid' ? kv('Student portal', p.user_id ? 'Account active' : 'Not signed in yet') : ''}</dl>
     <div class="field"><label for="pNotes">Admin notes</label><textarea id="pNotes" rows="3">${esc(p.notes)}</textarea></div>
     <div class="btns">
       <button class="btn" id="pSave">Save notes</button>
-      ${p.status !== 'paid' ? '<button class="btn ghost" id="pLink">Email payment link</button><button class="btn ghost" id="pPaid">Mark paid manually</button>' : ''}
+      ${p.status !== 'paid' ? `<button class="btn ghost" id="pLink">Email payment link</button>${inst ? '<button class="btn ghost" id="pInst">Record first instalment</button>' : '<button class="btn ghost" id="pPaid">Mark paid manually</button>'}` : ''}
+      ${inst && p.status === 'paid' && owed > 0 ? '<button class="btn ghost" id="pInstLink">Email instalment link</button><button class="btn ghost" id="pInst">Record instalment</button>' : ''}
       <button class="btn ghost" id="pMail">Send email</button>
-      ${p.status === 'paid' && p.stripe_payment_intent ? '<button class="btn danger" id="pRefund">Refund</button>' : ''}
+      ${!inst && p.status === 'paid' && p.stripe_payment_intent ? '<button class="btn danger" id="pRefund">Refund</button>' : ''}
       ${p.status === 'pending' ? '<button class="btn danger" id="pCancel">Cancel registration</button>' : ''}
       <button class="btn ghost" onclick="dlg.close()">Close</button>
     </div>
+    ${inst ? `<h2 style="font-size:16px">Instalments</h2>
+    <div class="panel tbl"><table><tbody>${(instal || []).map((x) => `<tr><td class="mut">${fmt(x.created_at)}</td><td>Instalment ${x.instalment}${x.note ? ` <span class="mut">· ${esc(x.note)}</span>` : ''}</td><td class="num">${gbp(x.amount)}</td><td>${pill(x.status)}${x.status === 'succeeded' && x.stripe_payment_intent ? ` <button class="btn danger" style="padding:4px 10px" data-irefund="${esc(x.stripe_payment_intent)}" data-amount="${x.amount}">Refund</button>` : ''}</td></tr>`).join('') || '<tr><td class="empty">No instalments paid yet</td></tr>'}</tbody></table></div>` : ''}
     <h2 style="font-size:16px">Emails sent</h2>
     <div class="panel tbl"><table><tbody>${(log || []).map((l) => `<tr><td class="mut">${fmt(l.created_at)}</td><td>${esc(l.subject)}</td><td>${pill(l.status)}</td></tr>`).join('') || '<tr><td class="empty">None yet</td></tr>'}</tbody></table></div>`;
+  if ($('#pInstLink')) $('#pInstLink').onclick = (e) => busy(e.target, 'Sending…', async () => { await api('bootcamp/send-instalment-link', { registrant_id: id }); toast('Instalment link sent'); openPerson(id); });
+  if ($('#pInst')) $('#pInst').onclick = (e) => {
+    const amount = prompt(`Amount received (£), up to ${gbp(owed || 15000)}`, '50');
+    if (!amount) return;
+    const note = prompt('How was it paid? (e.g. bank transfer, cash)', 'Bank transfer');
+    if (note === null) return;
+    busy(e.target, 'Saving…', async () => { await api('bootcamp/record-instalment', { registrant_id: id, amount: Number(amount), note }); toast('Instalment recorded'); await loadPeople(); go(); openPerson(id); });
+  };
+  $$('[data-irefund]', $('#dlgBody')).forEach((btn) => (btn.onclick = () => refund(btn.dataset.irefund, `${p.first_name} ${p.last_name} (instalment)`, Number(btn.dataset.amount), () => openPerson(id))));
   const upd = async (patch, msg) => { const { error } = await sb.from('registrants').update(patch).eq('id', id); toast(error ? error.message : msg); if (!error) { await loadPeople(); go(); openPerson(id); } };
   $('#pSave').onclick = () => upd({ notes: $('#pNotes').value }, 'Notes saved');
   if ($('#pPaid')) $('#pPaid').onclick = () => { const note = prompt('How was this paid? (e.g. bank transfer, cash)'); if (note) upd({ status: 'paid', paid_at: new Date().toISOString(), payment_method_note: 'Manual: ' + note }, 'Marked as paid. The confirmation email goes out within 5 minutes.'); };
   if ($('#pCancel')) $('#pCancel').onclick = () => confirm('Cancel this registration? They will stop receiving reminders.') && upd({ status: 'cancelled' }, 'Registration cancelled');
   if ($('#pLink')) $('#pLink').onclick = (e) => busy(e.target, 'Sending…', async () => {
-    await api('send', { registrant_ids: [id], subject: 'Complete your Kingdom School registration', html: '<p>Dear {{first_name}},</p><p>Here is your link to complete your £150 payment and secure your place on the Kingdom School of Business &amp; Ministry Bootcamp:</p><p style="margin:24px 0"><a href="{{payment_link}}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">COMPLETE PAYMENT</a></p><p>The Arimathea Academy</p>' });
+    await api('send', { registrant_ids: [id], subject: 'Complete your Kingdom School registration', html: '<p>Dear {{first_name}},</p><p>Here is your link to complete your {{amount_due_now}} payment and secure your place on the Kingdom School of Business &amp; Ministry Bootcamp:</p><p style="margin:24px 0"><a href="{{payment_link}}" style="background:#23571F;color:#FBF5E3;padding:14px 26px;text-decoration:none;font-weight:600">COMPLETE PAYMENT</a></p><p>The Arimathea Academy</p>' });
     toast('Payment link sent'); openPerson(id);
   });
   if ($('#pRefund')) $('#pRefund').onclick = () => refund(p.stripe_payment_intent, `${p.first_name} ${p.last_name}`, p.amount_paid, () => openPerson(id));

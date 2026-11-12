@@ -6,6 +6,11 @@ import { deliver, loadSettings, escapeHtml, unwrap } from './email.js';
 const isName = (v) => /^[\p{L}\p{M}][\p{L}\p{M} '’-]{0,59}$/u.test(v);
 const countsAsPayment = (env, obj) => obj?.livemode !== false || env.PREVIEW === 'true';
 
+// The retreat is postponed (12 Nov 2026): bookings, balance payments and reminders are off until the
+// Worker variable RETREAT_OPEN is set to "true". Existing bookings and the dashboard are unaffected.
+export const retreatOpen = (env) => env.RETREAT_OPEN === 'true';
+const CLOSED = 'The End of Year Retreat has been postponed, so bookings are closed for now. Please contact info@thearimatheaacademy.com with any questions.';
+
 // ── Prices (pence). The server is the only place prices come from. ──
 export const ROOMS = {
   double: { price: 28500, name: 'Double occupancy', blurb: 'Shared room with one other attendee' },
@@ -63,6 +68,7 @@ export function publicBooking(b, attendees) {
 // ── POST /api/retreat/book ── step 1 of the booking form. Creates (or, for a booking the same
 // browser started and hasn't paid, replaces) the booking, then returns an Embedded Checkout secret.
 export async function book(request, env, db) {
+  if (!retreatOpen(env)) return json({ error: CLOSED }, 410);
   const body = await request.json().catch(() => ({}));
   if (body.website) return json({ error: 'Invalid submission' }, 400); // honeypot
 
@@ -124,6 +130,7 @@ export async function getBooking(url, db) {
 
 // ── POST /api/retreat/checkout {id, t} ── pay whatever is outstanding (balance link in emails).
 export async function balanceCheckout(request, env, db) {
+  if (!retreatOpen(env)) return json({ error: CLOSED }, 410);
   const { id, t } = await request.json().catch(() => ({}));
   const found = await findByToken(db, id, t);
   if (!found) return json({ error: 'We could not find that booking. Please use the link in your email, or contact us.' }, 404);
@@ -298,7 +305,7 @@ export async function sendRetreatEmail(env, db, booking, template) {
 // Cron: remind deposit payers about their balance 7 and 14 days after the deposit, before the retreat.
 // Skips bookings that have an open invoice (they already have a way to pay).
 export async function runRetreatReminders(env, db, now = Date.now()) {
-  if (now >= RETREAT_STARTS) return { sent: 0 };
+  if (!retreatOpen(env) || now >= RETREAT_STARTS) return { sent: 0, closed: !retreatOpen(env) };
   const due = await db.from('retreat_bookings').select('*').eq('status', 'deposit_paid').then(unwrap);
   if (!due.length) return { sent: 0 };
   const logged = await db.from('email_log').select('booking_id, template').eq('kind', 'retreat').eq('status', 'sent')

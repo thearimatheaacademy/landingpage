@@ -73,6 +73,12 @@
 <select id="how_heard" name="how_heard"><option value="">Select…</option><option>Church announcement</option><option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>LinkedIn</option><option>Friend or family</option><option>Other</option></select></div>
 <div class="field"><label for="goals">What are you hoping to build? <span class="opt-label">(optional)</span></label><textarea id="goals" name="goals" rows="3" maxlength="2000"></textarea></div>
 <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+<fieldset class="choice-group" style="margin-top: 6px">
+<legend class="legend" style="grid-column: 1 / -1">How would you like to pay?</legend>
+<label class="choice"><input type="radio" name="payment_plan" value="full" checked><div><strong>Pay in full</strong><span>£150 today.</span></div></label>
+<label class="choice"><input type="radio" name="payment_plan" value="instalments"><div><strong>Pay in 3 instalments</strong><span id="plan-label">£50 today, then £50 a month later and £50 two months later.</span></div></label>
+</fieldset>
+<p class="note" id="plan-note" hidden style="margin-top: 0">You get your Zoom link and portal access after the first £50. We email you a payment link on the day each instalment is due.</p>
 <label class="check"><input type="checkbox" name="accept_terms" required> <span>I agree to the <a href="/terms/" target="_blank" rel="noopener">terms &amp; refund policy</a> and <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>.</span></label>
 <label class="check"><input type="checkbox" name="marketing_consent"> <span>Keep me updated about future Arimathea Academy programmes and events.</span></label>
 <button class="btn-primary" id="go" type="submit">Continue to payment</button>
@@ -95,7 +101,7 @@
 <div class="summary">
 <div class="summary-label">YOUR ORDER</div>
 <h2>Kingdom School Bootcamp</h2>
-<dl>
+<dl id="sum-lines">
 <dt>Programme fee</dt><dd>£150</dd>
 <div class="rule" role="presentation"></div>
 <div class="due" style="display: contents"><dt>Total</dt><dd>£150</dd></div>
@@ -115,7 +121,38 @@ document.addEventListener('DOMContentLoaded', function () {
   var C = window.Checkout, form = document.getElementById('details'), err1 = document.getElementById('err1'), err2 = document.getElementById('err2');
   var go = document.getElementById('go'), box = document.getElementById('checkout');
 
+  var form2 = document.getElementById('details');
+  function dateAfter(months) {
+    var d = new Date(), day = d.getDate();
+    d.setDate(1); d.setMonth(d.getMonth() + months);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+  // Display only: the server decides the amounts and dates.
+  function showPlan(plan) {
+    var lines;
+    if (plan === 'instalments') {
+      lines = '<dt>Instalment 1 of 3 (today)</dt><dd>£50</dd><dt>Instalment 2 (' + dateAfter(1) + ')</dt><dd>£50</dd><dt>Instalment 3 (' + dateAfter(2) + ')</dt><dd>£50</dd>'
+        + '<div class="rule" role="presentation"></div><dt>Total</dt><dd>£150</dd><div class="due" style="display: contents"><dt>Due today</dt><dd>£50</dd></div>';
+    } else {
+      lines = '<dt>Programme fee</dt><dd>£150</dd><div class="rule" role="presentation"></div><div class="due" style="display: contents"><dt>Due today</dt><dd>£150</dd></div>';
+    }
+    document.getElementById('sum-lines').innerHTML = lines;
+    document.getElementById('plan-label').textContent = '£50 today, then £50 on ' + dateAfter(1) + ' and £50 on ' + dateAfter(2) + '.';
+    document.getElementById('plan-note').hidden = plan !== 'instalments';
+  }
+  form2.addEventListener('change', function () { showPlan(form2.querySelector('[name=payment_plan]:checked').value); });
+  showPlan('full');
+
   function toPayment(out) {
+    if (out.instalment && out.instalment > 1) {
+      var paid = C.gbp(out.paid || 0), total = C.gbp(out.total || 15000);
+      document.getElementById('sum-lines').innerHTML = '<dt>Paid so far</dt><dd>' + paid + '</dd><dt>Total</dt><dd>' + total + '</dd><div class="rule" role="presentation"></div><div class="due" style="display: contents"><dt>Instalment ' + out.instalment + ' of 3</dt><dd>' + C.gbp(out.due_now) + '</dd></div>';
+      document.querySelector('.page-title').innerHTML = 'Pay your <span>instalment</span>';
+      document.querySelector('.lede').textContent = 'Instalment ' + out.instalment + ' of 3 for the Kingdom School of Business & Ministry Bootcamp.';
+    } else if (out.plan) {
+      showPlan(out.plan);
+    }
     document.getElementById('paying-as').innerHTML = 'Registering <strong>' + C.escapeHtml(out.registrant.first_name + ' ' + out.registrant.last_name) + '</strong> (' + C.escapeHtml(out.registrant.email) + ')';
     C.setStep(2);
     return C.mount(out.client_secret, box).catch(function (e) { C.showError(err2, e.message); });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DB, createClient } from './helpers/fake-supabase.mjs';
 import { quote, book, balanceCheckout, recordSession, recordInvoice, recordRefund, pickReminder, runRetreatReminders, adminRetreat, retreatEmail, gbp } from '../src/retreat.js';
 
-const env = { SITE_URL: 'https://site.example', RESEND_API_KEY: 'x', EMAIL_FROM: 'a@b', STRIPE_SECRET_KEY: 'sk_test_x' };
+const env = { SITE_URL: 'https://site.example', RESEND_API_KEY: 'x', EMAIL_FROM: 'a@b', STRIPE_SECRET_KEY: 'sk_test_x', RETREAT_OPEN: 'true' };
 const ctx = { pending: [], waitUntil(p) { this.pending.push(p); } };
 const settle = () => Promise.all(ctx.pending.splice(0));
 
