@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { createCheckoutSession, verifyStripeSignature, stripeRequest } from './stripe.js';
 import { runScheduler, sendToRegistrant, sendManual, sendLoginEmail } from './email.js';
-import { book, getBooking, balanceCheckout, recordSession, recordInvoice, recordRefund, runRetreatReminders, adminRetreat } from './retreat.js';
+import { book, getBooking, balanceCheckout, recordSession, recordInvoice, recordRefund, runRetreatReminders, adminRetreat, retreatOpen } from './retreat.js';
+import { nextPayment } from './plan.js';
+import { runInstalmentReminders, sendInstalmentEmail } from './instalments.js';
 
 // The site used to live under /landing. Admin and LMS pages (and their assets) still do, and links
 // already emailed to registrants use /landing/api/..., so those keep working alongside /api/....
@@ -45,6 +47,8 @@ export default {
     const path = url.pathname;
     const api = path.startsWith('/api/') ? path.slice(4) : path.startsWith(`${LEGACY}/api/`) ? path.slice(`${LEGACY}/api`.length) : null;
     if (api === null) {
+      // The retreat is postponed: its pages are off the site until RETREAT_OPEN is "true" again.
+      if (!app && !retreatOpen(env) && (path === '/retreat' || path.startsWith('/retreat/'))) return Response.redirect(`${url.origin}/`, 302);
       if (!app) {
         const target = MOVED[path.endsWith('/') ? path : `${path}/`];
         if (target) return Response.redirect(`${url.origin}${target}${url.search}`, 301);
@@ -85,6 +89,7 @@ export default {
     const db = adminClient(env);
     ctx.waitUntil(runScheduler(env, db).then((r) => console.log('scheduler', JSON.stringify(r))));
     ctx.waitUntil(runRetreatReminders(env, db).then((r) => console.log('retreat reminders', JSON.stringify(r))));
+    ctx.waitUntil(runInstalmentReminders(env, db).then((r) => console.log('instalment reminders', JSON.stringify(r))));
   },
 };
 
@@ -180,6 +185,7 @@ async function register(request, env, db) {
     how_heard: clean(body.how_heard, 200) || null,
     goals: clean(body.goals, 2000) || null,
     marketing_consent: body.marketing_consent === true,
+    payment_plan: body.payment_plan === 'instalments' ? 'instalments' : 'full',
   };
   if (!r.first_name || !r.last_name) return json({ error: 'Please enter your first and last name.' }, 400);
   if (!isName(r.first_name) || !isName(r.last_name)) return json({ error: 'Please use only letters, spaces, hyphens and apostrophes in names.' }, 400);
@@ -200,6 +206,11 @@ async function register(request, env, db) {
       return json({ error: 'This email already has a registration with us. Please contact info@thearimatheaacademy.com and we will help.' }, 409);
     }
     registrant = existing;
+    // The only thing a repeat (unauthenticated) submission may change on a pending registration is how they pay.
+    if (existing.payment_plan !== r.payment_plan) {
+      await db.from('registrants').update({ payment_plan: r.payment_plan }).eq('id', existing.id).eq('status', 'pending');
+      registrant = { ...existing, payment_plan: r.payment_plan };
+    }
   } else {
     const { data, error } = await db.from('registrants').insert(r).select().single();
     if (error) throw error;
@@ -212,9 +223,18 @@ async function register(request, env, db) {
 
 // Step 2 of /register/: an Embedded Checkout session for this registrant.
 async function startCheckout(env, db, registrant, shown = registrant) {
-  const session = await createCheckoutSession(env, registrant);
+  const next = nextPayment(registrant);
+  const session = await createCheckoutSession(env, registrant, next);
   await db.from('registrants').update({ stripe_session_id: session.id }).eq('id', registrant.id);
-  return { client_secret: session.client_secret, registrant: { first_name: shown.first_name, last_name: shown.last_name, email: shown.email } };
+  return {
+    client_secret: session.client_secret,
+    registrant: { first_name: shown.first_name, last_name: shown.last_name, email: shown.email },
+    plan: registrant.payment_plan,
+    due_now: next.amount,
+    instalment: next.instalment,
+    paid: shown === registrant ? registrant.amount_paid || 0 : 0,
+    total: registrant.amount_due,
+  };
 }
 
 const uuid = /^[0-9a-f-]{36}$/i;
@@ -226,9 +246,9 @@ async function resumePayment(url, env, db) {
   const token = url.searchParams.get('t');
   if (!uuid.test(id || '') || !uuid.test(token || '')) return Response.redirect(`${env.SITE_URL}/register/`, 302);
 
-  const { data: registrant } = await db.from('registrants').select('id, status').eq('id', id).eq('pay_token', token).maybeSingle();
+  const { data: registrant } = await db.from('registrants').select('*').eq('id', id).eq('pay_token', token).maybeSingle();
   if (!registrant) return Response.redirect(`${env.SITE_URL}/register/`, 302);
-  if (registrant.status === 'paid') return Response.redirect(`${env.SITE_URL}/success/?already=1`, 302);
+  if (registrant.status === 'paid' && !nextPayment(registrant)) return Response.redirect(`${env.SITE_URL}/success/?already=1`, 302);
   return Response.redirect(`${env.SITE_URL}/register/?id=${id}&t=${token}`, 302);
 }
 
@@ -238,8 +258,8 @@ async function resumeCheckout(request, env, db) {
   if (!uuid.test(id || '') || !uuid.test(t || '')) return json({ error: 'That payment link is not valid. Please register again.' }, 400);
   const { data: registrant } = await db.from('registrants').select('*').eq('id', id).eq('pay_token', t).maybeSingle();
   if (!registrant) return json({ error: 'That payment link is not valid. Please register again.' }, 404);
-  if (registrant.status === 'paid') return json({ error: 'You are already registered and paid. Check your inbox for your confirmation and Zoom link.', paid: true }, 409);
-  if (registrant.status !== 'pending') return json({ error: 'This registration can no longer be paid online. Please contact info@thearimatheaacademy.com and we will help.' }, 409);
+  if (registrant.status === 'paid' && !nextPayment(registrant)) return json({ error: 'You are already registered and paid in full. Check your inbox for your confirmation and Zoom link.', paid: true }, 409);
+  if (!['pending', 'paid'].includes(registrant.status)) return json({ error: 'This registration can no longer be paid online. Please contact info@thearimatheaacademy.com and we will help.' }, 409);
   return json(await startCheckout(env, db, registrant));
 }
 
@@ -270,16 +290,14 @@ async function stripeWebhook(request, env, ctx) {
     if (obj.metadata?.kind === 'retreat') {
       await recordSession(env, db, obj, ctx);
     } else {
-      const registrant = await markPaidFromSession(db, obj, env);
-      // Send the confirmation (+ Zoom link) straight away rather than waiting for the cron.
-      if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
+      await applyBootcampSession(env, db, obj, ctx);
     }
   } else if (event.type === 'invoice.paid') {
     await recordInvoice(env, db, obj, ctx);
   } else if (event.type === 'invoice.voided' || event.type === 'invoice.marked_uncollectible') {
     await db.from('retreat_bookings').update({ invoice_status: obj.status }).eq('stripe_invoice_id', obj.id);
   } else if (event.type === 'charge.refunded' && obj.refunded) {
-    await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', obj.payment_intent);
+    await refundBootcamp(db, obj.payment_intent);
     await recordRefund(db, obj.payment_intent);
   }
   return json({ received: true });
@@ -294,9 +312,8 @@ async function claimAfterPayment(url, env, db, ctx) {
   const session = await stripeRequest(env, 'GET', `/v1/checkout/sessions/${sessionId}`);
   if (session.payment_status !== 'paid') return Response.redirect(`${env.SITE_URL}/success/?processing=1`, 302);
 
-  // The webhook may not have arrived yet; marking paid here is idempotent.
-  const changed = await markPaidFromSession(db, session, env);
-  if (changed) ctx.waitUntil(sendToRegistrant(env, db, changed).catch((e) => console.error('confirm email', e)));
+  // The webhook may not have arrived yet; recording the payment here is idempotent.
+  await applyBootcampSession(env, db, session, ctx);
 
   // Auto sign-in only right after checkout; an old link falls back to the normal sign-in page.
   if (Date.now() / 1000 - session.created > 48 * 3600) return Response.redirect(env.LMS_URL, 302);
@@ -339,7 +356,39 @@ async function magicLink(env, db, registrant, redirectTo) {
   return { link: data.properties.action_link, created };
 }
 
-// Marks the session's registrant as paid. Returns the registrant only if this call changed them.
+// A paid bootcamp Checkout Session: in full (marks paid) or one instalment (recorded in bootcamp_payments).
+// Sends the confirmation (+ Zoom link) when they first become paid, or a receipt for a later instalment.
+// Returns the registrant if this call made them paid.
+async function applyBootcampSession(env, db, session, ctx) {
+  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat' || !countsAsPayment(env, session)) return null;
+  if (session.metadata?.payment_kind !== 'instalment') {
+    const registrant = await markPaidFromSession(db, session, env);
+    if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
+    return registrant;
+  }
+  const id = session.metadata?.registrant_id || session.client_reference_id;
+  if (!uuid.test(id || '')) return null;
+  return recordInstalment(env, db, ctx, { p_registrant: id, p_amount: session.amount_total, p_currency: session.currency, p_session: session.id, p_intent: session.payment_intent });
+}
+
+async function recordInstalment(env, db, ctx, args) {
+  const { data, error } = await db.rpc('record_bootcamp_payment', args);
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row.became_paid) ctx.waitUntil(sendToRegistrant(env, db, row.registrant).catch((e) => console.error('confirm email', e)));
+  else if (row.inserted) ctx.waitUntil(sendInstalmentEmail(env, db, row.registrant, 'receipt').catch((e) => console.error('instalment receipt', e)));
+  return row.became_paid ? row.registrant : null;
+}
+
+// Refunds: instalments are refunded one payment at a time; a full payment refunds the registration.
+async function refundBootcamp(db, paymentIntent) {
+  if (!paymentIntent) return;
+  const { error } = await db.rpc('refund_bootcamp_payment', { p_intent: paymentIntent });
+  if (error) throw error;
+  await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', paymentIntent).eq('payment_plan', 'full');
+}
+
+// Marks the session's registrant as paid in full. Returns the registrant only if this call changed them.
 async function markPaidFromSession(db, session, env) {
   if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat' || !countsAsPayment(env, session)) return null;
   const id = session.metadata?.registrant_id || session.client_reference_id;
@@ -377,8 +426,29 @@ async function adminApi(api, request, env, db, ctx) {
     return json({ error: 'Turned off in the preview: this would email real registrants. Use the live dashboard.' }, 403);
   }
   if (api === '/admin/run-scheduler' && request.method === 'POST') {
-    const [bootcamp, retreat] = await Promise.all([runScheduler(env, db), runRetreatReminders(env, db)]);
-    return json({ ...bootcamp, retreat });
+    const [bootcamp, retreat, instalments] = await Promise.all([runScheduler(env, db), runRetreatReminders(env, db), runInstalmentReminders(env, db)]);
+    return json({ ...bootcamp, retreat, instalments });
+  }
+  if (api.startsWith('/admin/bootcamp/') && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    if (!uuid.test(body.registrant_id || '')) return json({ error: 'Missing registrant' }, 400);
+    const { data: r } = await db.from('registrants').select('*').eq('id', body.registrant_id).maybeSingle();
+    if (!r) return json({ error: 'Registrant not found' }, 404);
+    const next = nextPayment(r);
+    if (api === '/admin/bootcamp/send-instalment-link') {
+      if (r.payment_plan !== 'instalments' || !next) return json({ error: 'Nothing left to pay on this registration.' }, 400);
+      const row = await sendInstalmentEmail(env, db, r, 'link');
+      return row?.status === 'sent' ? json({ ok: true }) : json({ error: row?.error || 'Email failed' }, 502);
+    }
+    if (api === '/admin/bootcamp/record-instalment') {
+      // Money received outside Stripe (e.g. bank transfer) towards an instalment plan.
+      if (r.payment_plan !== 'instalments' || !next) return json({ error: 'Nothing left to pay on this registration.' }, 400);
+      const amount = Math.round(Number(body.amount) * 100);
+      if (!(amount > 0) || amount > next.balance) return json({ error: `Amount must be between £0.01 and £${(next.balance / 100).toFixed(2)}.` }, 400);
+      await recordInstalment(env, db, ctx, { p_registrant: r.id, p_amount: amount, p_note: String(body.note || 'Recorded manually').slice(0, 200), p_recorded_by: userData.user.email });
+      return json({ ok: true });
+    }
+    return json({ error: 'Not found' }, 404);
   }
   if (api === '/admin/send' && request.method === 'POST') {
     // Send an email now to specific registrants (e.g. "resend payment link").
@@ -400,7 +470,7 @@ async function adminApi(api, request, env, db, ctx) {
       ...(reason ? { 'metadata[note]': String(reason).slice(0, 200) } : {}),
     });
     // The charge.refunded webhook also does this; updating now keeps the dashboard instant.
-    await db.from('registrants').update({ status: 'refunded' }).eq('stripe_payment_intent', payment_intent);
+    await refundBootcamp(db, payment_intent);
     await recordRefund(db, payment_intent);
     return json({ ok: true });
   }
@@ -410,8 +480,7 @@ async function adminApi(api, request, env, db, ctx) {
     let updated = 0;
     for (const r of pending || []) {
       const session = await stripeRequest(env, 'GET', `/v1/checkout/sessions/${r.stripe_session_id}`);
-      const registrant = await markPaidFromSession(db, session, env);
-      if (registrant) { updated++; await sendToRegistrant(env, db, registrant); }
+      if (await applyBootcampSession(env, db, session, ctx)) updated++;
     }
     return json({ checked: pending?.length || 0, updated });
   }

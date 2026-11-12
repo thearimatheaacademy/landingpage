@@ -14,7 +14,7 @@ Everything here was supplied by Moi unless marked *(drafted)*. Drafted copy was 
 
 ## Kingdom School of Business and Ministry Bootcamp (`/bootcamp/`, register at `/register/`)
 - Starts **Friday 11 December 2026**, **every Friday for 15 weeks**, **online via Zoom**
-- Programme fee **£150**
+- Programme fee **£150**, or **3 instalments of £50**: one when registering, then one and two months later (prices and dates in `src/plan.js`)
 - "Your place will be confirmed once your payment has been verified." "Registration is compulsory."
 - Registration: **https://thearimatheaacademy.com/register/** (all buttons on the site go here).
   The flyer link **tinyurl.com/thekingdomway** still points at the old Google Form: repoint it to the register page (see TODO).
@@ -30,7 +30,7 @@ Everything here was supplied by Moi unless marked *(drafted)*. Drafted copy was 
   7. Aniekeme Ekwo — AI Specialist
   8. Raphael Anene — LinkedIn Expert
 
-## End of Year Retreat (`/retreat/`, book at `/retreat/book/`)
+## End of Year Retreat: POSTPONED (12 Nov 2026, off the website; see DECISIONS #30) (`/retreat/`, book at `/retreat/book/`)
 - **Mon 28 – Thu 31 December 2026**, **Leicestershire** (venue not yet given)
 - Packages: **Double occupancy £285** (share a room with one other attendee) · **Single occupancy £345** (private room) · **Non-refundable deposit £50**
 - Booking on the site (replaces Jotform). The booker gives name, email, phone; then each attendee's name, room and dietary

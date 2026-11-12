@@ -1,4 +1,5 @@
 // Email automation: sequence steps, scheduled campaigns and manual sends, delivered via Resend.
+import { paymentSummary, amountDueNow } from './plan.js';
 
 const MAX_PER_RUN = 100; // Resend batch limit; the cron runs every 5 minutes.
 const DELAY_STEP_WINDOW_H = 48; // don't send a delay-based step more than 48h late
@@ -155,6 +156,8 @@ function mergeVars(env, settings, r, isRegistrant) {
     start_date: settings.start_date || '',
     session_time: settings.session_time || '',
     payment_link: isRegistrant ? `${env.SITE_URL}/api/pay?id=${r.id}&t=${r.pay_token}` : '',
+    payment_summary: isRegistrant ? paymentSummary(r) : '',
+    amount_due_now: isRegistrant ? amountDueNow(r) : '',
     lms_link: env.LMS_URL,
   };
 }

@@ -24,12 +24,16 @@ test('old /landing pages redirect to their new homes, keeping the query string',
 });
 
 test('www redirects to the bare domain; pages are served with security headers', async () => {
-  const w = await get('https://www.thearimatheaacademy.com/retreat/?x=1');
-  assert.equal(w.headers.get('location'), 'https://thearimatheaacademy.com/retreat/?x=1');
-  const page = await get('https://thearimatheaacademy.com/retreat/');
+  const w = await get('https://www.thearimatheaacademy.com/bootcamp/?x=1');
+  assert.equal(w.headers.get('location'), 'https://thearimatheaacademy.com/bootcamp/?x=1');
+  const page = await get('https://thearimatheaacademy.com/bootcamp/');
   assert.equal(page.status, 200);
   assert.equal(page.headers.get('x-frame-options'), 'SAMEORIGIN');
-  assert.equal(served.at(-1), '/retreat/');
+  assert.equal(served.at(-1), '/bootcamp/');
+  // The retreat is postponed: its pages send people to the home page.
+  for (const p of ['/retreat/', '/retreat/book/?room=single', '/retreat']) {
+    assert.equal((await get('https://thearimatheaacademy.com' + p)).headers.get('location'), 'https://thearimatheaacademy.com/', p);
+  }
 });
 
 test('API answers on /api and on the old /landing/api paths (links in emails already sent)', async () => {
@@ -61,9 +65,9 @@ test('preview: dashboard and portal stay on the preview address; links point at 
   // Locked without the password; the login sets a cookie that later requests (and the dashboard's API calls) carry.
   assert.equal((await bare('/')).status, 401);
   assert.equal((await bare('/', { headers: { authorization: 'Basic ' + btoa('x:wrong') } })).status, 401);
-  const login = await bare('/retreat/?a=1', { headers: { authorization: 'Basic ' + btoa('anyone:open sesame') } });
+  const login = await bare('/bootcamp/?a=1', { headers: { authorization: 'Basic ' + btoa('anyone:open sesame') } });
   assert.equal(login.status, 302);
-  assert.equal(login.headers.get('location'), '/retreat/?a=1');
+  assert.equal(login.headers.get('location'), '/bootcamp/?a=1');
   const cookie = login.headers.get('set-cookie').split(';')[0];
   const call = (u, init = {}) => bare(u, { ...init, headers: { cookie, ...(init.headers || {}) } });
   assert.equal((await call('/api/config', { headers: { authorization: 'Bearer some-admin-jwt' } })).status, 200);

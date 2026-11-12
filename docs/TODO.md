@@ -7,6 +7,9 @@
 - [x] Live site on `thearimatheaacademy.com`, `www`, `dashboard.` and `lms.`; email cron running again.
 
 ## Still to do after launch (Moi)
+- [ ] After the instalments release is live: apply `supabase/migrations/0009_email_amounts_follow_plan.sql` (Claude Code can do it).
+- [ ] Decide what to tell RT-80DE67 about the postponed retreat (keep the deposit for new dates, or refund from Dashboard → Retreat).
+- [ ] Confirm the instalment wording in `/terms/` (drafted).
 - [ ] Add the secret **`PREVIEW_PASSWORD`** to `landingpage-preview` (the preview is locked until you do).
 - [ ] Supabase → Authentication → Providers → Email: confirm **"Confirm email" is on** (audit item needing validation).
 - [ ] Delete the two leftover routes on `landingpage`: `thearimatheaacademy.com/landing*` and `www.thearimatheaacademy.com/landing*` (not needed; the Worker redirects old `/landing` links itself).
