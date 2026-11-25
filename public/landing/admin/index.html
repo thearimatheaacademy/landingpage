@@ -92,6 +92,8 @@ tbody tr.click:hover{background:#FFFBEF}
 .pill.paid,.pill.sent,.pill.succeeded{background:#DCEFD8;color:#1d5a19}
 .pill.pending,.pill.scheduled,.pill.sending,.pill.partially_refunded{background:#FBECCB;color:#7a5410}
 .pill.refunded,.pill.cancelled,.pill.void{background:#eee;color:#555}
+.pill.posted{background:#DCEFD8;color:#1d5a19;box-shadow:inset 0 0 0 1px #9cc795}
+.pill.expired{background:#eee;color:#555}
 .pill.deposit_paid,.pill.open{background:#E3ECF6;color:#1F4A72}
 .pill.failed{background:#FBE0DB;color:var(--err)}
 .empty{padding:28px;text-align:center;color:var(--muted)}
@@ -232,6 +234,23 @@ dialog::backdrop{background:rgba(20,30,15,.55)}
       <p class="hint" style="margin-top:12px">Deposit payers get the balance link straight away, then reminders 7 and 14 days after their deposit (not while an invoice is open). Open a booking to resend the link, send a Stripe invoice or record a bank transfer.</p>
     </section>
 
+    <!-- Books -->
+    <section data-page="books" class="hidden">
+      <div class="head"><div><div class="crumb">Running on Bended Knees · paperback · UK delivery</div><h1>Book orders</h1></div>
+        <div class="acts"><a class="btn ghost hm" href="https://thearimatheaacademy.com/books/" target="_blank">View shop</a><button class="btn ghost" id="bkCsv">Export addresses to post</button></div></div>
+      <div class="stats" id="bkStats"></div>
+      <div class="panel pad" style="margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <div class="field" style="margin:0;max-width:220px"><label for="bkStock">Total copies to sell</label><input id="bkStock" type="number" min="0" step="1"></div>
+        <button class="btn" id="bkStockSave">Save stock</button>
+        <p class="hint" style="margin:0;flex:1 1 260px">Copies sold count against this number. When more copies arrive, raise it (for example from 10 to 30). The shop shows "sold out" and takes no payments once everything is sold or held.</p>
+      </div>
+      <div class="panel">
+        <div class="tools"><div class="chips" id="bkChips"></div></div>
+        <div class="tbl"><table><thead><tr><th>Order</th><th class="num">Copies</th><th class="num hm">Total</th><th>Status</th><th class="hm">Postcode</th><th class="hm">Ordered</th></tr></thead><tbody id="bkRows"></tbody></table></div>
+      </div>
+      <p class="hint" style="margin-top:12px">"Unfinished" are people who started checkout but didn't pay; their copies are held for 30 minutes and then go back on sale.</p>
+    </section>
+
     <!-- Payments -->
     <section data-page="payments" class="hidden">
       <div class="head"><div><div class="crumb">Live from Stripe</div><h1>Payments</h1></div>
@@ -296,7 +315,7 @@ const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric'
 const ago = (d) => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 60 ? `${Math.max(m, 1)}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : day(d); };
 const gbp = (p) => '£' + (p / 100).toLocaleString('en-GB', { maximumFractionDigits: 2 });
 const initials = (a, b) => ((a || '?')[0] + ((b || '')[0] || '')).toUpperCase();
-const statusLabel = { deposit_paid: 'Deposit paid', open: 'Invoice open', void: 'Void', pending: 'Not paid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled', succeeded: 'Paid', partially_refunded: 'Part refunded', failed: 'Failed', sent: 'Sent', scheduled: 'Scheduled', sending: 'Sending' };
+const statusLabel = { posted: 'Posted', expired: 'Expired', deposit_paid: 'Deposit paid', open: 'Invoice open', void: 'Void', pending: 'Not paid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled', succeeded: 'Paid', partially_refunded: 'Part refunded', failed: 'Failed', sent: 'Sent', scheduled: 'Scheduled', sending: 'Sending' };
 const pill = (s) => `<span class="pill ${esc(s)}">${esc(statusLabel[s] || s)}</span>`;
 const toast = (m) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 3800); };
 const show = (id) => ['login', 'denied', 'app'].forEach((x) => $('#' + x).classList.toggle('hidden', x !== id));
@@ -309,12 +328,13 @@ const I = {
   emails: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/>',
   automations: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   retreat: '<path d="M3 20l6-11 4 7 3-4 5 8z"/><circle cx="17" cy="6" r="2"/>',
+  books: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   sessions: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z"/><path d="M8 21h8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
   more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const PAGES = [['overview', 'Overview'], ['registrants', 'Bootcamp'], ['retreat', 'Retreat'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
+const PAGES = [['overview', 'Overview'], ['registrants', 'Bootcamp'], ['retreat', 'Retreat'], ['books', 'Books'], ['payments', 'Payments'], ['emails', 'Emails', 'COMMUNICATION'], ['automations', 'Automations'], ['sessions', 'Sessions', 'PROGRAMME'], ['settings', 'Settings']];
 
 // Navigation: sidebar on desktop, bottom tab bar (+ More sheet) on phones.
 $('#nav').innerHTML = PAGES.map(([k, l, sep]) => `${sep ? `<div class="sep">${sep}</div>` : ''}<a href="#${k}" data-nav="${k}">${icon(k)}${l}${k === 'registrants' ? '<span class="count" id="navCount"></span>' : ''}</a>`).join('');
@@ -438,15 +458,16 @@ const weekAgo = () => Date.now() - 7 * 864e5;
 
 // ── Overview ──
 loaders.overview = async () => {
-  await Promise.all([loadPeople(), loadBookings()]);
+  await Promise.all([loadPeople(), loadBookings(), loadBooks()]);
   const c = counts();
+  const bk = bookStats();
   const L = bookings.filter((b) => ['paid', 'deposit_paid'].includes(b.status));
   const attending = L.reduce((n, b) => n + b.people.length, 0);
   const retreatIn = bookings.reduce((n, b) => n + b.amount_paid, 0);
   const owed = L.reduce((n, b) => n + b.total_amount - b.amount_paid, 0);
   $('#ovStats').innerHTML = stat('Bootcamp paid', c.paid, `${c.all} registered · ${c.pending} not paid yet${people.some((p) => owedBootcamp(p)) ? ` · ${gbp(people.reduce((n, p) => n + owedBootcamp(p), 0))} in instalments to come` : ''}`, 'up')
-    + stat('Retreat attending', attending, `${L.length} booking${L.length === 1 ? '' : 's'}`, 'up')
-    + stat('Collected', gbp(revenue() + retreatIn), 'bootcamp + retreat')
+    + stat('Books sold', bk.sold, `${bk.left} of ${bk.total} left${bk.toPost ? ` · <b>${bk.toPost} to post</b>` : ''}`, bk.toPost ? 'warn' : 'up')
+    + stat('Collected', gbp(revenue() + retreatIn + bk.revenue), 'bootcamp + retreat + books')
     + stat('Retreat balances due', gbp(owed), owed ? 'Balance links sent automatically' : 'All paid', owed ? 'warn' : '');
   const seg = [['paid', '#2F7A2A', 'Paid'], ['pending', '#D9A53A', 'Not paid'], ['refunded', '#A8A397', 'Refunded'], ['cancelled', '#D8D2C0', 'Cancelled']];
   $('#ovBar').innerHTML = c.all ? seg.map(([k, col]) => `<span style="width:${(c[k] / c.all) * 100}%;background:${col}"></span>`).join('') : '';
@@ -457,6 +478,7 @@ loaders.overview = async () => {
   $('#ovRtLegend').innerHTML = rseg.filter(([k]) => rc[k] || ['paid', 'deposit_paid'].includes(k)).map(([k, col, l]) => `<span><i style="background:${col}"></i>${l} ${rc[k] || 0}</span>`).join('');
   const feed = [
     ...people.map((p) => ({ kind: 'person', id: p.id, first: p.first_name, last: p.last_name, status: p.status, at: p.created_at, tag: 'Bootcamp' })),
+    ...orders.filter((o) => ['paid', 'posted', 'refunded'].includes(o.status)).map((o) => ({ kind: 'order', id: o.id, first: o.first_name, last: o.last_name, status: o.status, at: o.paid_at || o.created_at, tag: `Book · ${o.reference} · ${o.quantity} ${o.quantity === 1 ? 'copy' : 'copies'}` })),
     ...bookings.map((b) => ({ kind: 'booking', id: b.id, first: b.first_name, last: b.last_name, status: b.status, at: b.created_at, tag: `Retreat · ${b.reference} · ${b.people.length} ${b.people.length === 1 ? 'person' : 'people'}` })),
   ].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 10);
   $('#ovLatest').innerHTML = feed.map((f) => `<li class="click" data-kind="${f.kind}" data-id="${esc(f.id)}" style="cursor:pointer"><div class="who"><i>${esc(initials(f.first, f.last))}</i><span>${esc(f.first)} ${esc(f.last)}<small style="display:block">${esc(f.tag)}</small></span></div>${pill(f.status)}<span class="t">${ago(f.at)}</span></li>`).join('') || '<li class="empty">No registrations or bookings yet.</li>';
@@ -468,7 +490,7 @@ loaders.overview = async () => {
   const next = [...(camps || []).map((x) => [x.subject, x.scheduled_for]), ...(steps || []).map((x) => [x.subject, x.send_at])].filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1])).slice(0, 4);
   $('#ovNext').innerHTML = next.map(([s, at]) => `<li>${icon('emails', 18)}<span>${esc(s)}</span><span class="t">${fmt(at)}</span></li>`).join('') || '<li class="empty">Nothing scheduled.</li>';
 };
-$('#ovLatest').onclick = (e) => { const li = e.target.closest('[data-id]'); if (li) (li.dataset.kind === 'booking' ? openBooking : openPerson)(li.dataset.id); };
+$('#ovLatest').onclick = (e) => { const li = e.target.closest('[data-id]'); if (li) ({ booking: openBooking, order: openOrder }[li.dataset.kind] || openPerson)(li.dataset.id); };
 
 // ── Registrants ──
 let filter = '';
@@ -743,6 +765,94 @@ function composeBooking(b) {
   $('#cBack').onclick = () => openBooking(b.id);
 }
 
+// ── Books ──
+let orders = [], bookStock = null, bkFilter = 'open';
+async function loadBooks() {
+  const [o, st] = await Promise.all([
+    sb.from('book_orders').select('*').order('created_at', { ascending: false }),
+    sb.from('book_stock').select('*').eq('id', 'running-on-bended-knees').maybeSingle(),
+  ]);
+  if (o.error) return toast(o.error.message);
+  orders = o.data || []; bookStock = st.data;
+}
+const isHeld = (o) => o.status === 'pending' && new Date(o.hold_expires_at) > new Date();
+function bookStats() {
+  const sold = orders.filter((o) => ['paid', 'posted'].includes(o.status)).reduce((n, o) => n + o.quantity, 0);
+  const held = orders.filter(isHeld).reduce((n, o) => n + o.quantity, 0);
+  const total = bookStock?.stock_total ?? 0;
+  return {
+    sold, held, total, left: Math.max(0, total - sold - held),
+    toPost: orders.filter((o) => o.status === 'paid').length,
+    revenue: orders.filter((o) => ['paid', 'posted'].includes(o.status)).reduce((n, o) => n + o.total_amount, 0),
+  };
+}
+loaders.books = async () => { await loadBooks(); renderBooks(); };
+function renderBooks() {
+  const st = bookStats();
+  $('#bkStats').innerHTML = stat('Copies sold', st.sold, `of ${st.total}`, 'up') + stat('Left to sell', st.left, st.held ? `${st.held} held at checkout right now` : st.left ? 'Available in the shop' : 'Shop shows sold out', st.left ? '' : 'warn')
+    + stat('To post', st.toPost, st.toPost ? 'Paid, not yet posted' : 'All posted', st.toPost ? 'warn' : '') + stat('Book revenue', gbp(st.revenue), 'UK delivery included');
+  $('#bkStock').value = st.total;
+  const groups = { open: ['paid'], posted: ['posted'], all: ['paid', 'posted', 'refunded'], unfinished: ['pending', 'expired', 'cancelled'] };
+  const c = (k) => orders.filter((o) => groups[k].includes(o.status)).length;
+  $('#bkChips').innerHTML = [['open', 'To post'], ['posted', 'Posted'], ['all', 'All paid'], ['unfinished', 'Unfinished']]
+    .map(([k, l]) => `<button class="chip ${bkFilter === k ? 'on' : ''}" data-f="${k}">${l} ${c(k)}</button>`).join('');
+  const list = orders.filter((o) => groups[bkFilter].includes(o.status));
+  $('#bkRows').innerHTML = list.map((o) => `<tr class="click" data-id="${o.id}"><td><div class="who"><i>${esc(initials(o.first_name, o.last_name))}</i><span>${esc(o.first_name)} ${esc(o.last_name)}<small style="display:block">${esc(o.reference)} · ${esc(o.email)}</small></span></div></td><td class="num">${o.quantity}</td><td class="num hm">${gbp(o.total_amount)}</td><td>${pill(isHeld(o) ? 'pending' : o.status === 'pending' ? 'expired' : o.status)}</td><td class="hm mut">${esc(o.postcode)}</td><td class="hm mut">${day(o.created_at)}</td></tr>`).join('')
+    || `<tr><td colspan="6" class="empty">${bkFilter === 'open' ? 'Nothing waiting to be posted.' : 'No orders here.'}</td></tr>`;
+}
+$('#bkChips').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { bkFilter = b.dataset.f; renderBooks(); } };
+$('#bkRows').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) openOrder(tr.dataset.id); };
+$('#bkStockSave').onclick = (e) => busy(e.target, 'Saving…', async () => {
+  const n = Number($('#bkStock').value);
+  if (!Number.isInteger(n) || n < 0) throw new Error('Enter a whole number of copies.');
+  const st = bookStats();
+  if (n < st.sold) throw new Error(`${st.sold} copies are already sold, so the total can't be lower than that.`);
+  const { error } = await sb.from('book_stock').update({ stock_total: n }).eq('id', 'running-on-bended-knees');
+  if (error) throw error;
+  toast('Stock saved'); await loaders.books();
+});
+$('#bkCsv').onclick = () => {
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['Order', 'Name', 'Address line 1', 'Address line 2', 'Town or city', 'Postcode', 'Copies', 'Email', 'Phone', 'Paid on']];
+  orders.filter((o) => o.status === 'paid').forEach((o) => rows.push([o.reference, `${o.first_name} ${o.last_name}`, o.address_line1, o.address_line2, o.city, o.postcode, o.quantity, o.email, o.phone, day(o.paid_at)]));
+  const url = URL.createObjectURL(new Blob(['﻿' + rows.map((r) => r.map(cell).join(',')).join('\r\n')], { type: 'text/csv' }));
+  Object.assign(document.createElement('a'), { href: url, download: 'books-to-post.csv' }).click();
+  URL.revokeObjectURL(url);
+};
+
+async function openOrder(id) {
+  await loadBooks();
+  const o = orders.find((x) => x.id === id);
+  if (!o) return;
+  const { data: log } = await sb.from('email_log').select('*').eq('book_order_id', id).order('created_at', { ascending: false });
+  const label = [`${o.first_name} ${o.last_name}`, o.address_line1, o.address_line2, o.city, o.postcode].filter(Boolean);
+  const kv = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="mut">–</span>'}</dd>`;
+  const shown = isHeld(o) ? 'pending' : o.status === 'pending' ? 'expired' : o.status;
+  $('#dlgBody').innerHTML = `
+    <h3>${esc(o.first_name)} ${esc(o.last_name)} ${pill(shown)}</h3>
+    <dl class="kv">${kv('Order', o.reference)}<dt>Copies</dt><dd>${o.quantity} × ${gbp(o.unit_price)} = <b>${gbp(o.total_amount)}</b></dd>${kv('Email', o.email)}${kv('Phone', o.phone)}${kv('Ordered', fmt(o.created_at))}${kv('Paid', o.paid_at ? fmt(o.paid_at) : '')}${kv('Posted', o.posted_at ? fmt(o.posted_at) : '')}${kv('Marketing', o.marketing_consent ? 'Opted in' : 'No')}</dl>
+    <div class="panel pad" style="margin-bottom:14px"><div class="crumb">Post to</div><p style="margin:8px 0 0;font-size:16px;line-height:1.5">${label.map(esc).join('<br>')}</p></div>
+    <div class="btns">
+      ${o.status === 'paid' ? '<button class="btn" id="oPosted">Mark as posted</button>' : ''}
+      <button class="btn ghost" id="oCopy">Copy address</button>
+      ${['paid', 'posted'].includes(o.status) && o.stripe_payment_intent ? '<button class="btn danger" id="oRefund">Refund</button>' : ''}
+      <button class="btn ghost" onclick="dlg.close()">Close</button>
+    </div>
+    <div class="field" style="margin-top:14px"><label for="oNotes">Admin notes</label><textarea id="oNotes" rows="3">${esc(o.notes)}</textarea></div>
+    <div class="btns"><button class="btn" id="oSave">Save notes</button></div>
+    <h2 style="font-size:16px">Emails sent</h2>
+    <div class="panel tbl"><table><tbody>${(log || []).map((l) => `<tr><td class="mut">${fmt(l.created_at)}</td><td>${esc(l.subject)}</td><td>${pill(l.status)}</td></tr>`).join('') || '<tr><td class="empty">None yet</td></tr>'}</tbody></table></div>`;
+  const reopen = async (msg) => { if (msg) toast(msg); await openOrder(id); if (location.hash === '#books') renderBooks(); };
+  if ($('#oPosted')) $('#oPosted').onclick = (e) => busy(e.target, 'Saving…', async () => {
+    const r = await api('book/posted', { order_id: id });
+    reopen(r.emailed ? 'Marked as posted. The buyer has been emailed.' : 'Marked as posted.');
+  });
+  $('#oCopy').onclick = async () => { try { await navigator.clipboard.writeText(label.join('\n')); toast('Address copied'); } catch { toast(label.join(', ')); } };
+  if ($('#oRefund')) $('#oRefund').onclick = () => refund(o.stripe_payment_intent, `${o.first_name} ${o.last_name} (${o.reference})`, o.total_amount, () => openOrder(id));
+  $('#oSave').onclick = async () => { const { error } = await sb.from('book_orders').update({ notes: $('#oNotes').value }).eq('id', id); toast(error ? error.message : 'Notes saved'); };
+  dlg.open || dlg.showModal();
+}
+
 function refund(pi, who, amount, back) {
   $('#dlgBody').innerHTML = `<h3>Refund ${esc(who)}</h3>
     <p>This refunds the full ${amount ? gbp(amount) : 'payment'} to their card through Stripe and marks them as refunded. They'll stop receiving programme emails. This can't be undone.</p>
@@ -791,9 +901,9 @@ async function loadPayments() {
   const refunded = payments.reduce((s, p) => s + p.amount_refunded, 0);
   $('#pyStats').innerHTML = stat('Payments', ok.length, `${payments.length} loaded`) + stat('Gross', gbp(gross)) + stat('Refunded', gbp(refunded), '', refunded ? 'warn' : '') + stat('Net', gbp(gross - refunded), 'before Stripe fees', 'up');
   $('#pays').innerHTML = payments.map((p, i) => {
-    const r = p.registrant || p.booking;
+    const r = p.registrant || p.booking || p.book_order;
     const name = r ? `${r.first_name} ${r.last_name}` : p.name || p.email || 'Unknown';
-    const tag = p.booking ? `Retreat · ${p.booking.reference}` : p.registrant ? 'Bootcamp' : '';
+    const tag = p.booking ? `Retreat · ${p.booking.reference}` : p.book_order ? `Book · ${p.book_order.reference}` : p.registrant ? 'Bootcamp' : '';
     return `<tr class="${r ? 'click' : ''}" data-i="${i}"><td><div class="who"><i>${esc(initials(...name.split(' ')))}</i><span>${esc(name)}<small style="display:block">${esc([tag, p.email].filter(Boolean).join(' · '))}</small></span></div></td>
       <td class="num">${gbp(p.amount)}${p.amount_refunded && p.amount_refunded < p.amount ? `<div class="hint">${gbp(p.amount_refunded)} refunded</div>` : ''}</td>
       <td>${pill(p.status)}</td><td class="hm mut" style="text-transform:capitalize">${esc(p.card || '')}</td><td class="hm mut">${fmt(p.created * 1000)}</td>
@@ -804,10 +914,11 @@ async function loadPayments() {
 }
 $('#pays').onclick = (e) => {
   const rb = e.target.closest('[data-refund]');
-  if (rb) { const p = payments[rb.dataset.refund]; const r = p.registrant || p.booking; return refund(p.payment_intent, r ? `${r.first_name} ${r.last_name}${p.booking ? ` (${p.booking.reference})` : ''}` : p.email, p.amount); }
+  if (rb) { const p = payments[rb.dataset.refund]; const r = p.registrant || p.booking || p.book_order; const ref = (p.booking || p.book_order)?.reference; return refund(p.payment_intent, r ? `${r.first_name} ${r.last_name}${ref ? ` (${ref})` : ''}` : p.email, p.amount); }
   const tr = e.target.closest('tr[data-i]');
   const p = tr && payments[tr.dataset.i];
   if (p?.booking) openBooking(p.booking.id);
+  else if (p?.book_order) openOrder(p.book_order.id);
   else if (p?.registrant) openPerson(p.registrant.id);
 };
 $('#sync').onclick = (e) => busy(e.target, 'Syncing…', async () => {

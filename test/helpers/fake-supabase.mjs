@@ -1,6 +1,6 @@
 // Test-only in-memory stand-in for @supabase/supabase-js (subset used by the Worker).
 // Minimal in-memory stand-in for @supabase/supabase-js (enough for the Worker's queries).
-export const DB = { tables: { registrants: [], email_log: [], email_sequence_steps: [], email_campaigns: [], settings: [], admins: [], retreat_bookings: [], retreat_attendees: [], retreat_payments: [] }, users: [], failBatchWithDup: false };
+export const DB = { tables: { registrants: [], email_log: [], email_sequence_steps: [], email_campaigns: [], settings: [], admins: [], retreat_bookings: [], retreat_attendees: [], retreat_payments: [], book_stock: [], book_orders: [] }, users: [], failBatchWithDup: false };
 let seq = 1;
 class Q {
   constructor(t) { this.t = t; this.f = []; this.op = 'select'; this.one = null; this.rng = null; this.head = false; }
@@ -56,7 +56,26 @@ function recalc(id) {
   b.paid_at = paid >= b.total_amount ? (b.paid_at ?? new Date().toISOString()) : null;
   return { ...b };
 }
+// Same rules as private.book_available / reserve_book_order in 0010_book_shop.sql.
+function bookAvailable(id, now = Date.now()) {
+  const st = DB.tables.book_stock.find((x) => x.id === id);
+  const held = DB.tables.book_orders.filter((o) => o.product_id === id && (['paid', 'posted'].includes(o.status) || (o.status === 'pending' && Date.parse(o.hold_expires_at) > now)))
+    .reduce((n, o) => n + o.quantity, 0);
+  return Math.max(0, st.stock_total - held);
+}
 const rpcs = {
+  book_available: (a) => ({ data: bookAvailable(a.p_product), error: null }),
+  reserve_book_order(a) {
+    const st = DB.tables.book_stock.find((x) => x.id === a.p_product);
+    if (a.p_replace_order) DB.tables.book_orders.filter((o) => o.id === a.p_replace_order && o.pay_token === a.p_replace_token && o.status === 'pending').forEach((o) => { o.status = 'cancelled'; });
+    const avail = bookAvailable(a.p_product);
+    if (avail < a.p_quantity) return { data: null, error: { message: `sold_out:${avail}` } };
+    const o = { id: crypto.randomUUID(), reference: 'BK-' + String(seq++).padStart(6, '0'), product_id: a.p_product, first_name: a.p_first_name, last_name: a.p_last_name, email: a.p_email, phone: a.p_phone,
+      address_line1: a.p_line1, address_line2: a.p_line2, city: a.p_city, postcode: a.p_postcode, quantity: a.p_quantity, unit_price: st.unit_price, total_amount: st.unit_price * a.p_quantity,
+      status: 'pending', hold_expires_at: new Date(Date.now() + a.p_hold_minutes * 60000).toISOString(), pay_token: crypto.randomUUID(), marketing_consent: a.p_marketing };
+    DB.tables.book_orders.push(o);
+    return { data: { ...o }, error: null };
+  },
   record_retreat_payment(a) {
     if (!DB.tables.retreat_bookings.some((b) => b.id === a.p_booking)) return { data: null, error: { message: 'not found' } };
     const dup = DB.tables.retreat_payments.some((p) => (a.p_session && p.stripe_session_id === a.p_session) || (a.p_invoice && p.stripe_invoice_id === a.p_invoice));

@@ -64,9 +64,10 @@ Foundation includes: full pre-recorded Addiction to Freedom programme; the 5R an
 Restoration includes: all Foundation materials and community access; three private mentoring and support sessions; personalised recovery guidance and implementation support; accountability check-ins and progress reviews; priority community access.
 
 ## Book
-- ***Running on Bended Knees*** — *How to Build Your Altar and Stay Consistent in the Secret Place* — by Collins Imadojemu — **£10**
+- ***Running on Bended Knees*** — *How to Build Your Altar and Stay Consistent in the Secret Place* — by Collins Imadojemu
+- Shop: **https://thearimatheaacademy.com/books/** · **£15** a copy including UK delivery · UK addresses only · up to 5 per order
+- Stock: **10 copies** (change it in Dashboard → Books; price is in the database table `book_stock`)
 - Cover: `public/assets/img/book-running-on-bended-knees.jpg` (original in `source-material/`)
-- Buy link: **not yet provided**
 
 ## Removed for now
 - The Arimathea Academy **Group Mentorship** (was on the Linktree). Removed at Moi's request on 27 Oct 2026.

@@ -4,6 +4,7 @@ import { runScheduler, sendToRegistrant, sendManual, sendLoginEmail } from './em
 import { book, getBooking, balanceCheckout, recordSession, recordInvoice, recordRefund, runRetreatReminders, adminRetreat, retreatOpen } from './retreat.js';
 import { nextPayment } from './plan.js';
 import { runInstalmentReminders, sendInstalmentEmail } from './instalments.js';
+import { bookInfo, orderBook, bookReturn, recordBookSession, refundBook, adminBook } from './books.js';
 
 // The site used to live under /landing. Admin and LMS pages (and their assets) still do, and links
 // already emailed to registrants use /landing/api/..., so those keep working alongside /api/....
@@ -57,7 +58,7 @@ export default {
     }
 
     try {
-      if (request.method === 'POST' && ['/register', '/retreat/book', '/lms/login', '/checkout', '/retreat/checkout'].includes(api) && !(await withinRateLimit(request, env))) {
+      if (request.method === 'POST' && ['/register', '/retreat/book', '/lms/login', '/checkout', '/retreat/checkout', '/book/order'].includes(api) && !(await withinRateLimit(request, env))) {
         return json({ error: 'Too many attempts from your connection. Please wait a minute and try again.' }, 429);
       }
       if (api === '/config' && request.method === 'GET') {
@@ -68,6 +69,9 @@ export default {
       if (api === '/register' && request.method === 'POST') return await register(request, env, adminClient(env));
       if (api === '/checkout' && request.method === 'POST') return await resumeCheckout(request, env, adminClient(env));
       if (api === '/pay' && request.method === 'GET') return await resumePayment(url, env, adminClient(env));
+      if (api === '/book' && request.method === 'GET') return await bookInfo(adminClient(env));
+      if (api === '/book/order' && request.method === 'POST') return await orderBook(request, env, adminClient(env));
+      if (api === '/book/return' && request.method === 'GET') return await bookReturn(url, env, adminClient(env), ctx);
       if (api === '/retreat/book' && request.method === 'POST') return await book(request, env, adminClient(env));
       if (api === '/retreat/booking' && request.method === 'GET') return await getBooking(url, adminClient(env));
       if (api === '/retreat/checkout' && request.method === 'POST') return await balanceCheckout(request, env, adminClient(env));
@@ -289,6 +293,8 @@ async function stripeWebhook(request, env, ctx) {
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     if (obj.metadata?.kind === 'retreat') {
       await recordSession(env, db, obj, ctx);
+    } else if (obj.metadata?.kind === 'book') {
+      await recordBookSession(env, db, obj, ctx);
     } else {
       await applyBootcampSession(env, db, obj, ctx);
     }
@@ -299,6 +305,7 @@ async function stripeWebhook(request, env, ctx) {
   } else if (event.type === 'charge.refunded' && obj.refunded) {
     await refundBootcamp(db, obj.payment_intent);
     await recordRefund(db, obj.payment_intent);
+    await refundBook(db, obj.payment_intent);
   }
   return json({ received: true });
 }
@@ -360,7 +367,7 @@ async function magicLink(env, db, registrant, redirectTo) {
 // Sends the confirmation (+ Zoom link) when they first become paid, or a receipt for a later instalment.
 // Returns the registrant if this call made them paid.
 async function applyBootcampSession(env, db, session, ctx) {
-  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat' || !countsAsPayment(env, session)) return null;
+  if (session.payment_status !== 'paid' || ['retreat', 'book'].includes(session.metadata?.kind) || !countsAsPayment(env, session)) return null;
   if (session.metadata?.payment_kind !== 'instalment') {
     const registrant = await markPaidFromSession(db, session, env);
     if (registrant) ctx.waitUntil(sendToRegistrant(env, db, registrant).catch((e) => console.error('confirm email', e)));
@@ -390,7 +397,7 @@ async function refundBootcamp(db, paymentIntent) {
 
 // Marks the session's registrant as paid in full. Returns the registrant only if this call changed them.
 async function markPaidFromSession(db, session, env) {
-  if (session.payment_status !== 'paid' || session.metadata?.kind === 'retreat' || !countsAsPayment(env, session)) return null;
+  if (session.payment_status !== 'paid' || ['retreat', 'book'].includes(session.metadata?.kind) || !countsAsPayment(env, session)) return null;
   const id = session.metadata?.registrant_id || session.client_reference_id;
   if (!id) return null;
   const { data, error } = await db
@@ -419,6 +426,7 @@ async function adminApi(api, request, env, db, ctx) {
   const { data: admin } = await db.from('admins').select('user_id').eq('user_id', userData.user.id).maybeSingle();
   if (!admin) return json({ error: 'Forbidden' }, 403);
 
+  if (api.startsWith('/admin/book/') && request.method === 'POST') return adminBook(api, request, env, db);
   if (api.startsWith('/admin/retreat/') && request.method === 'POST') {
     return adminRetreat(api, request, env, db, userData.user.email, ctx);
   }
@@ -472,6 +480,7 @@ async function adminApi(api, request, env, db, ctx) {
     // The charge.refunded webhook also does this; updating now keeps the dashboard instant.
     await refundBootcamp(db, payment_intent);
     await recordRefund(db, payment_intent);
+    await refundBook(db, payment_intent);
     return json({ ok: true });
   }
   if (api === '/admin/sync' && request.method === 'POST') {
@@ -501,6 +510,10 @@ async function listPayments(env, db, startingAfter) {
     ? await db.from('retreat_payments').select('stripe_payment_intent, booking:retreat_bookings(id, reference, first_name, last_name, email)').in('stripe_payment_intent', intents)
     : { data: [] };
   const bookingByIntent = Object.fromEntries((rps || []).filter((x) => x.booking).map((x) => [x.stripe_payment_intent, x.booking]));
+  const { data: books } = intents.length
+    ? await db.from('book_orders').select('id, reference, first_name, last_name, email, quantity, stripe_payment_intent').in('stripe_payment_intent', intents)
+    : { data: [] };
+  const bookByIntent = Object.fromEntries((books || []).map((b) => [b.stripe_payment_intent, b]));
   return {
     has_more: charges.has_more,
     payments: charges.data.map((c) => ({
@@ -517,6 +530,7 @@ async function listPayments(env, db, startingAfter) {
       receipt_url: c.receipt_url,
       registrant: byIntent[c.payment_intent] || null,
       booking: bookingByIntent[c.payment_intent] || null,
+      book_order: bookByIntent[c.payment_intent] || null,
     })),
   };
 }
