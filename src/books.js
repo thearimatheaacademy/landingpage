@@ -156,7 +156,7 @@ export function bookEmail(o, template) {
   if (template === 'order_confirmation') {
     return {
       subject: `Thank you for your order (${o.reference})`,
-      html: `<p>Dear ${safe(o.first_name)},</p><p>Thank you for ordering <strong>Running on Bended Knees</strong> by Collins Imadojemu.</p>${items}${deliverTo}<p>We will email you again when your book has been posted. If anything in the address is wrong, just reply to this email.</p><p>The Arimathea Academy</p>`,
+      html: `<p>Dear ${safe(o.first_name)},</p><p>Thank you for ordering <strong>Running on Bended Knees</strong> by Collins Imadojemu.</p>${items}${deliverTo}<p>We will email you again when your book has been posted. If anything in the address is wrong, just reply to this email.</p><p>The Arimathea Academy</p><p style="font-size:12px;color:#6b6858">Our terms of sale: <a href="https://thearimatheaacademy.com/terms/" style="color:#6b6858">thearimatheaacademy.com/terms</a></p>`,
     };
   }
   if (template === 'posted') {
