@@ -30,12 +30,18 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 }
 
-// ── GET /api/book ── price and copies left (for the shop page).
+// ── GET /api/book ── price, and whether it can be bought. The stock count itself stays private
+// (dashboard only): the page learns just "sold out" and the most it may offer in one order (at most 5).
 export async function bookInfo(db) {
   const stock = await db.from('book_stock').select('title, unit_price').eq('id', BOOK_ID).single().then(unwrap);
-  const { data: available, error } = await db.rpc('book_available', { p_product: BOOK_ID });
+  const available = await copiesLeft(db);
+  return json({ title: stock.title, price: stock.unit_price, sold_out: available === 0, max_per_order: Math.min(MAX_PER_ORDER, available) });
+}
+
+export async function copiesLeft(db) {
+  const { data, error } = await db.rpc('book_available', { p_product: BOOK_ID });
   if (error) throw error;
-  return json({ title: stock.title, price: stock.unit_price, available, max_per_order: Math.min(MAX_PER_ORDER, available) });
+  return data;
 }
 
 // ── POST /api/book/order ── step 1 of the shop: reserve copies, then an Embedded Checkout for them.
@@ -83,7 +89,9 @@ export async function orderBook(request, env, db) {
     const left = /sold_out:(\d+)/.exec(error.message || '');
     if (left) {
       const n = Number(left[1]);
-      return json({ error: n ? `Sorry, only ${n} ${n === 1 ? 'copy is' : 'copies are'} left. Please choose ${n === 1 ? '1 copy' : `up to ${n} copies`}.` : 'Sorry, the book is sold out.', available: n, sold_out: n === 0 }, 409);
+      return n
+        ? json({ error: "Sorry, we don't have that many copies left. Please choose fewer copies.", max_per_order: Math.min(MAX_PER_ORDER, n) }, 409)
+        : json({ error: 'Sorry, the book is sold out.', sold_out: true }, 409);
     }
     throw error;
   }

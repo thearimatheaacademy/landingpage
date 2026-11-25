@@ -1,7 +1,7 @@
 import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { DB, createClient } from './helpers/fake-supabase.mjs';
-import { orderBook, recordBookSession, refundBook, adminBook, bookInfo, ukPostcode, bookEmail } from '../src/books.js';
+import { orderBook, recordBookSession, refundBook, adminBook, bookInfo, copiesLeft, ukPostcode, bookEmail } from '../src/books.js';
 
 const env = { SITE_URL: 'https://site.example', RESEND_API_KEY: 'x', EMAIL_FROM: 'a@b', STRIPE_SECRET_KEY: 'sk_test_x' };
 const ctx = { pending: [], waitUntil(p) { this.pending.push(p); } };
@@ -43,7 +43,9 @@ test('order: £15 a copy from the server, embedded checkout, stock held', async 
   assert.equal(s['line_items[0][quantity]'], '2');
   assert.equal(s['metadata[kind]'], 'book');
   assert.ok(Number(s.expires_at) - Date.now() / 1000 >= 30 * 60, 'Stripe needs at least 30 minutes');
-  assert.equal((await (await bookInfo(db)).json()).available, 8);
+  assert.equal(await copiesLeft(db), 8);
+  // The public endpoint never reveals the count.
+  assert.deepEqual(await (await bookInfo(db)).json(), { title: 'Running on Bended Knees', price: 1500, sold_out: false, max_per_order: 5 });
 });
 
 test('never more than 10 copies: the 11th is refused, and an expired hold frees copies', async () => {
@@ -51,11 +53,14 @@ test('never more than 10 copies: the 11th is refused, and an expired hold frees 
   for (const q of [5, 5]) assert.equal((await orderBook(req({ ...buyer, quantity: q }), env, db)).status, 200);
   const r = await orderBook(req({ ...buyer, quantity: 1 }), env, db);
   assert.equal(r.status, 409);
-  assert.deepEqual(await r.json(), { error: 'Sorry, the book is sold out.', available: 0, sold_out: true });
+  assert.deepEqual(await r.json(), { error: 'Sorry, the book is sold out.', sold_out: true });
+  assert.equal((await (await bookInfo(db)).json()).sold_out, true);
   DB.tables.book_orders[0].hold_expires_at = new Date(Date.now() - 1000).toISOString();
   const partial = await orderBook(req({ ...buyer, quantity: 5 }), env, db);
   assert.equal(partial.status, 200);
-  assert.equal((await orderBook(req({ ...buyer, quantity: 2 }), env, db)).status, 409);
+  const tooMany = await orderBook(req({ ...buyer, quantity: 2 }), env, db);
+  assert.equal(tooMany.status, 409);
+  assert.doesNotMatch(JSON.stringify(await tooMany.json()), /"available"|only \d/);
 });
 
 test('editing details releases your own hold and expires the old payment page', async () => {
@@ -64,7 +69,7 @@ test('editing details releases your own hold and expires the old payment page', 
   await orderBook(req({ ...buyer, quantity: 5, order_id: first.order.id, token: first.order.token }), env, db);
   assert.equal(DB.tables.book_orders[0].status, 'cancelled');
   assert.ok(stripe.some((c) => c.path === '/v1/checkout/sessions/cs_test_1/expire'));
-  assert.equal((await (await bookInfo(db)).json()).available, 5);
+  assert.equal(await copiesLeft(db), 5);
 });
 
 test('bad input is refused: non-UK postcode, links in the address, too many copies', async () => {
@@ -95,7 +100,7 @@ test('paid: recorded once, confirmation emailed; posted emails the buyer; refund
 
   await refundBook(db, 'pi_b');
   assert.equal(DB.tables.book_orders[0].status, 'refunded');
-  assert.equal((await (await bookInfo(db)).json()).available, 10);
+  assert.equal(await copiesLeft(db), 10);
 });
 
 test('names and addresses cannot inject HTML or merge tags into emails', () => {
