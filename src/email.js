@@ -119,6 +119,7 @@ export async function deliver(env, db, settings, queue) {
   const rows = queue.map((q, i) => ({
     registrant_id: q.registrant?.id ?? null,
     booking_id: q.booking_id ?? null,
+    book_order_id: q.book_order_id ?? null,
     template: q.template ?? null,
     to_email: emails[i].to[0],
     kind: q.kind,

@@ -7,7 +7,8 @@
 - [x] Live site on `thearimatheaacademy.com`, `www`, `dashboard.` and `lms.`; email cron running again.
 
 ## Still to do after launch (Moi)
-- [ ] After the instalments release is live: apply `supabase/migrations/0009_email_amounts_follow_plan.sql` (Claude Code can do it).
+- [ ] Book shop: confirm **£15 includes UK postage** (assumed).
+- [x] Applied `0009_email_amounts_follow_plan.sql` after the instalments release went live (12 Nov).
 - [ ] Decide what to tell RT-80DE67 about the postponed retreat (keep the deposit for new dates, or refund from Dashboard → Retreat).
 - [ ] Confirm the instalment wording in `/terms/` (drafted).
 - [ ] Add the secret **`PREVIEW_PASSWORD`** to `landingpage-preview` (the preview is locked until you do).
@@ -29,7 +30,6 @@ merge into `main` → the live site rebuilds automatically.
 - [ ] Confirm bootcamp refund terms and the privacy policy (both pages say "Draft for review").
 - [ ] **Retreat venue name** and **what's included** (meals, sessions). Retreat page and emails don't name the venue yet.
 - [ ] **Room capacity**: is there a limit on rooms? Booking currently has no cap ("Limited rooms" is only text).
-- [ ] **Book buy link**: "BUY THE BOOK" on the home page goes nowhere yet (Amazon/Selar link, or a Stripe Payment Link for £10).
 - [ ] Confirm or rewrite drafted copy (see `docs/CONTENT.md`).
 - [ ] **Logo file** (gold lion and crown) in high resolution: use it in the header and regenerate the favicon.
 - [ ] Newsletter provider (Mailchimp / Brevo / Kit / MailerLite) for the home page sign-up form (not connected yet).
