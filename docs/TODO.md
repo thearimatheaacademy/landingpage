@@ -7,9 +7,9 @@
 - [x] Live site on `thearimatheaacademy.com`, `www`, `dashboard.` and `lms.`; email cron running again.
 
 ## Still to do after launch (Moi)
-- [ ] Book shop: confirm **£15 includes UK postage** (assumed).
+- [x] Book shop: £15 includes UK postage (confirmed by Moi, 25 Nov).
 - [x] Applied `0009_email_amounts_follow_plan.sql` after the instalments release went live (12 Nov).
-- [ ] Decide what to tell RT-80DE67 about the postponed retreat (keep the deposit for new dates, or refund from Dashboard → Retreat).
+- [x] RT-80DE67: £50 deposit refunded (24 Nov); booking shows as refunded.
 - [ ] Confirm the instalment wording in `/terms/` (drafted).
 - [ ] Add the secret **`PREVIEW_PASSWORD`** to `landingpage-preview` (the preview is locked until you do).
 - [ ] Supabase → Authentication → Providers → Email: confirm **"Confirm email" is on** (audit item needing validation).

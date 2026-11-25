@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Buy Running on Bended Knees | The Arimathea Academy</title>
-<meta name="description" content="Order a paperback copy of Running on Bended Knees by Collins Imadojemu. £15 including UK delivery. Limited copies.">
+<meta name="description" content="Order a paperback copy of Running on Bended Knees by Collins Imadojemu. £15 including UK delivery.">
 <meta name="theme-color" content="#1E3A1B">
 <meta property="og:title" content="Buy Running on Bended Knees | The Arimathea Academy">
-<meta property="og:description" content="Order a paperback copy of Running on Bended Knees by Collins Imadojemu. £15 including UK delivery. Limited copies.">
+<meta property="og:description" content="Order a paperback copy of Running on Bended Knees by Collins Imadojemu. £15 including UK delivery.">
 <meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -48,7 +48,6 @@
 <div class="eyebrow">BOOKS · BY COLLINS IMADOJEMU</div>
 <h1 class="page-title">Running on <span>Bended Knees</span></h1>
 <p class="lede">How to Build Your Altar and Stay Consistent in the Secret Place. Paperback, £15 including delivery to a UK address.</p>
-<p class="lede" id="stock-line" style="margin-top: 8px; font-weight: 600; color: #23571F"></p>
 <ol class="steps" aria-label="Progress"><li aria-current="step">Delivery details</li><li>Payment</li></ol>
 </div>
 </section>
@@ -144,16 +143,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('sold-out').hidden = false;
     document.querySelectorAll('[data-step]').forEach(function (s) { s.hidden = true; });
     document.querySelector('.steps').hidden = true;
-    document.getElementById('stock-line').textContent = 'Sold out';
   }
   function setStock(info) {
     PRICE = info.price || PRICE;
-    if (!info.available) return soldOut();
+    if (info.sold_out) return soldOut();
     var keep = Number(qty.value) || 1;
     qty.innerHTML = '';
     for (var i = 1; i <= info.max_per_order; i++) qty.insertAdjacentHTML('beforeend', '<option value="' + i + '">' + i + (i === 1 ? ' copy' : ' copies') + '</option>');
     qty.value = String(Math.min(keep, info.max_per_order));
-    document.getElementById('stock-line').textContent = info.available <= 10 ? 'Limited stock: ' + info.available + (info.available === 1 ? ' copy' : ' copies') + ' left.' : '';
     summary(Number(qty.value));
   }
   qty.addEventListener('change', function () { summary(Number(qty.value)); });
@@ -187,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return C.mount(out.client_secret, box).catch(function (x) { C.showError(err2, x.message); });
     }).catch(function (x) {
       if (x.data && x.data.sold_out) return soldOut();
-      if (x.data && x.data.available) C.api('/book').then(setStock).catch(function () {});
+      if (x.data && x.data.max_per_order) C.api('/book').then(setStock).catch(function () {});
       C.showError(err1, x.message);
     }).finally(function () { go.disabled = false; go.textContent = 'Continue to payment'; });
   });
